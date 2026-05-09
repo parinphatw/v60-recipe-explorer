@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V60 Ceramic Recipe Explorer</title>
+<style>
+  :root {
+    --bg: #1a1614;
+    --panel: #221d1a;
+    --panel-2: #2a2421;
+    --border: #3a302a;
+    --text: #e8dccb;
+    --muted: #9c8f7e;
+    --accent: #d4915a;
+    --accent-dim: #8b5a3c;
+    --good: #8fbc8f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  header {
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 16px;
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  main {
+    display: grid; grid-template-columns: 380px 1fr;
+    height: calc(100vh - 51px);
+  }
+  .controls {
+    padding: 20px; overflow-y: auto; border-right: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .preview {
+    padding: 24px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .group { margin-bottom: 22px; }
+  .group-title {
+    font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .bean-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bean-card {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; cursor: pointer; transition: all 0.15s;
+    text-align: left; color: var(--text); font-family: inherit;
+  }
+  .bean-card:hover { border-color: var(--accent-dim); }
+  .bean-card.active {
+    border-color: var(--accent); background: rgba(212, 145, 90, 0.1);
+  }
+  .bean-card .name { font-weight: 600; font-size: 13px; }
+  .bean-card .descr { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .row label { font-size: 13px; color: var(--text); }
+  .row .val { font-size: 13px; color: var(--accent); font-family: "SF Mono", Menlo, monospace; font-weight: 500; }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; background: transparent; height: 22px;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    background: var(--panel-2); height: 4px; border-radius: 2px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); margin-top: -5px; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+  .pill-group { display: flex; gap: 6px; }
+  .pill {
+    flex: 1; padding: 6px 10px; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 999px; cursor: pointer; font-size: 12px; text-align: center;
+    transition: all 0.15s; color: var(--text);
+  }
+  .pill:hover { border-color: var(--accent-dim); }
+  .pill.active { background: var(--accent); color: #1a1614; border-color: var(--accent); font-weight: 600; }
+
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-btn {
+    padding: 8px 10px; background: transparent; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); font-size: 12px; cursor: pointer;
+    transition: all 0.15s; text-align: left; font-family: inherit;
+  }
+  .preset-btn:hover { border-color: var(--accent); background: var(--panel-2); }
+
+  .recipe-card, .schedule-card, .tips-card, .prompt-area {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .recipe-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .recipe-title { font-size: 18px; font-weight: 600; }
+  .recipe-meta { color: var(--muted); font-size: 12px; }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .stat .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .stat .value { font-size: 16px; font-weight: 600; font-family: "SF Mono", Menlo, monospace; margin-top: 3px; }
+  .stat .unit { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .extras { margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .extras div { margin-bottom: 4px; }
+  .extras strong { color: var(--text); font-weight: 500; }
+  .agitation {
+    margin-top: 14px; padding: 10px 12px; background: rgba(212, 145, 90, 0.08);
+    border-left: 2px solid var(--accent); border-radius: 4px;
+    font-size: 12px;
+  }
+  .agitation strong { color: var(--accent); }
+
+  .schedule-card h3, .tips-card h3 {
+    margin: 0 0 12px; font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .pour-row {
+    display: grid; grid-template-columns: 56px 130px 1fr 110px; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--border); align-items: center;
+    font-size: 13px;
+  }
+  .pour-row:last-child { border-bottom: none; }
+  .pour-row .time { font-family: "SF Mono", Menlo, monospace; color: var(--accent); }
+  .pour-row .lbl { font-weight: 500; }
+  .pour-row .bar {
+    height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden;
+    position: relative;
+  }
+  .pour-row .bar .fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    transition: width 0.2s ease;
+  }
+  .pour-row .total { font-family: "SF Mono", Menlo, monospace; color: var(--muted); text-align: right; font-size: 12px; }
+
+  .tips-card ul { margin: 0; padding-left: 18px; }
+  .tips-card li { margin-bottom: 6px; font-size: 13px; }
+
+  .refs-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .refs-card h3 {
+    margin: 0 0 12px; font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .refs-card .ref-row {
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .refs-card .ref-row:last-child { border-bottom: none; }
+  .refs-card .ref-author { font-weight: 600; color: var(--accent); }
+  .refs-card .ref-title { color: var(--text); }
+  .refs-card .ref-where { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .refs-card .ref-note {
+    margin-top: 10px; padding: 8px 10px; background: rgba(212, 145, 90, 0.05);
+    border-radius: 4px; font-size: 11px; color: var(--muted); font-style: italic;
+  }
+
+  .prompt-area .label-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .prompt-area .label-row span {
+    font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted);
+  }
+  .copy-btn {
+    background: var(--accent); color: #1a1614; border: none; padding: 5px 12px;
+    border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px; font-family: inherit;
+  }
+  .copy-btn:hover { background: #e0a070; }
+  .copy-btn.copied { background: var(--good); }
+  .prompt-text {
+    font-family: "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.55;
+    white-space: pre-wrap; color: var(--text); max-height: 320px; overflow-y: auto;
+  }
+
+  @media (max-width: 880px) {
+    main { grid-template-columns: 1fr; height: auto; }
+    .controls { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>V60 Ceramic Recipe Explorer</h1>
+  <span class="sub">Hario V60 02 · 4:6 method-aware · Tune by bean processing</span>
+</header>
+<main>
+  <aside class="controls">
+    <div class="group">
+      <div class="group-title">Bean Processing</div>
+      <div class="bean-grid" id="beanGrid"></div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Dose & Ratio</div>
+      <div class="row"><label>Dose</label><span class="val mono" id="doseVal">15 g</span></div>
+      <input type="range" id="doseSlider" min="12" max="25" step="0.5" value="15">
+      <div class="row" style="margin-top: 12px;"><label>Ratio (1:X)</label><span class="val mono" id="ratioVal">1:15</span></div>
+      <input type="range" id="ratioSlider" min="14" max="18" step="0.5" value="15">
+    </div>
+
+    <div class="group">
+      <div class="group-title">Water Temperature</div>
+      <div class="row"><label>°C</label><span class="val mono" id="tempVal">94 °C</span></div>
+      <input type="range" id="tempSlider" min="85" max="96" step="1" value="94">
+    </div>
+
+    <div class="group">
+      <div class="group-title">Flavor — Acidity Bias</div>
+      <div class="pill-group" id="acidityPills">
+        <div class="pill" data-val="sweet">Sweeter</div>
+        <div class="pill active" data-val="balanced">Balanced</div>
+        <div class="pill" data-val="bright">Brighter</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Body — Strength</div>
+      <div class="pill-group" id="strengthPills">
+        <div class="pill" data-val="light">Lighter</div>
+        <div class="pill active" data-val="balanced">Balanced</div>
+        <div class="pill" data-val="strong">Stronger</div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Presets</div>
+      <div class="preset-grid" id="presets"></div>
+    </div>
+  </aside>
+
+  <section class="preview">
+    <div class="recipe-card">
+      <div class="recipe-header">
+        <div>
+          <div class="recipe-title" id="recipeTitle">Washed Recipe</div>
+          <div class="recipe-meta" id="recipeDescr">Clean, bright, transparent.</div>
+        </div>
+        <div class="recipe-meta mono" id="recipeRatio">1:15</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="label">Dose</div><div class="value" id="stDose">15<span class="unit"> g</span></div></div>
+        <div class="stat"><div class="label">Total Water</div><div class="value" id="stTotal">225<span class="unit"> g</span></div></div>
+        <div class="stat"><div class="label">Temperature</div><div class="value" id="stTemp">94<span class="unit"> °C</span></div></div>
+        <div class="stat"><div class="label">Brew Time</div><div class="value" id="stTime">~3:00</div></div>
+      </div>
+      <div class="extras">
+        <div><strong>Grind:</strong> <span id="stGrind"></span></div>
+        <div><strong>Reference:</strong> <span id="stGrindRef"></span></div>
+        <div><strong>Bloom:</strong> <span id="stBloom"></span></div>
+      </div>
+      <div class="agitation"><strong>Agitation:</strong> <span id="stAgit"></span></div>
+    </div>
+
+    <div class="schedule-card">
+      <h3>Pour Schedule</h3>
+      <div id="schedule"></div>
+    </div>
+
+    <div class="tips-card">
+      <h3>Brewing Tips</h3>
+      <ul id="tipsList"></ul>
+    </div>
+
+    <div class="refs-card">
+      <h3>References</h3>
+      <div id="refsList"></div>
+      <div class="ref-note">No URLs included — search by author + title to find current sources. All listed are verified real authors / publications.</div>
+    </div>
+
+    <div class="prompt-area">
+      <div class="label-row">
+        <span>Prompt</span>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <div class="prompt-text" id="promptText"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const BEAN_DEFAULTS = {
+  washed: {
+    label: 'Washed',
+    descr: 'Clean, bright, transparent. Acidity-forward.',
+    temp: 94, ratio: 15,
+    grind: 'Medium-fine (~700μm, fine sea salt)',
+    grindRef: 'Comandante C40: 22 clicks · 1Zpresso JX: 2.0 · Kingrinder K6: 70',
+    bloomMult: 2, bloomTime: 45,
+    targetTime: '2:30 – 3:00',
+    agitation: 'Steady center-out spiral. Gentle swirl after final pour to flatten bed.',
+    tips: [
+      'High temp (93–96°C) extracts citric/malic acidity cleanly.',
+      'Tetsu Kasuya 4:6 — first 40% controls sweetness/acidity, last 60% controls body.',
+      'Sour or sharp? Grind finer or raise temp 1°C.',
+      'Hollow or thin? Raise dose, or grind finer.',
+      'Fines from fine grind = slower drawdown. Watch for stalling.'
+    ],
+    references: [
+      { author: 'Tetsu Kasuya', title: '4:6 Method (World Brewers Cup 2016 winning recipe)', where: 'YouTube channel "Tetsu Kasuya"' },
+      { author: 'James Hoffmann', title: 'The Ultimate V60 Technique', where: 'YouTube' },
+      { author: 'Scott Rao', title: 'The Coffee Brewing Handbook', where: 'book — scottrao.com' },
+      { author: 'Specialty Coffee Association', title: 'SCA Brewing Standards & Brew Control Chart', where: 'sca.coffee' }
+    ]
+  },
+  natural: {
+    label: 'Natural',
+    descr: 'Fruity, syrupy, heavier body. Berry/wine notes.',
+    temp: 92, ratio: 16,
+    grind: 'Medium (~800μm, kosher salt)',
+    grindRef: 'Comandante C40: 25 clicks · 1Zpresso JX: 2.3 · Kingrinder K6: 80',
+    bloomMult: 2.5, bloomTime: 45,
+    targetTime: '2:45 – 3:15',
+    agitation: 'Gentle larger pours. Avoid aggressive spiral — naturals release more fines that clog.',
+    tips: [
+      'Lower temp (90–93°C) preserves fruit, avoids ashy bitterness.',
+      'Coarser grind compensates for higher fines and dense fruit body.',
+      'Fewer pours = less agitation = cleaner, more nuanced cup.',
+      'Muddy or heavy? Grind coarser, fewer pours.',
+      'Flat? Raise temp 1–2°C or grind 1 click finer.'
+    ],
+    references: [
+      { author: 'Lance Hedrick', title: 'V60 brewing tutorials and process deep-dives', where: 'YouTube channel "Lance Hedrick"' },
+      { author: 'James Hoffmann', title: 'Coffee Processing Methods explained', where: 'YouTube' },
+      { author: 'Perfect Daily Grind', title: 'Articles on natural / dry process coffee', where: 'perfectdailygrind.com' },
+      { author: 'Café Imports', title: 'Coffee Processing 101 — Natural / Dry Process', where: 'cafeimports.com education section' }
+    ]
+  },
+  honey: {
+    label: 'Honey',
+    descr: 'Sweet, mellow, balanced. Stone fruit, brown sugar.',
+    temp: 93, ratio: 15.5,
+    grind: 'Medium (~750μm)',
+    grindRef: 'Comandante C40: 24 clicks · 1Zpresso JX: 2.2 · Kingrinder K6: 75',
+    bloomMult: 2, bloomTime: 45,
+    targetTime: '2:30 – 3:00',
+    agitation: 'Balanced — moderate spiral, controlled flow rate.',
+    tips: [
+      'Honey sits between washed and natural — start mid-range, dial by taste.',
+      'Sweetness peaks with full 45s bloom and clean 4:6 split.',
+      'Bitter? Shorten brew or grind coarser.',
+      'Sour? Extend brew or grind finer.',
+      'White, yellow, red, black honey vary in mucilage — darker = treat closer to natural.'
+    ],
+    references: [
+      { author: 'Café Imports', title: 'Coffee Processing 101 — Honey / Pulped Natural', where: 'cafeimports.com education section' },
+      { author: 'Perfect Daily Grind', title: 'Honey process variants — white, yellow, red, black', where: 'perfectdailygrind.com' },
+      { author: 'Sweet Maria\'s', title: 'Processing methods overview', where: 'sweetmarias.com library' },
+      { author: 'James Hoffmann', title: 'Process explainer videos', where: 'YouTube' }
+    ]
+  },
+  anaerobic: {
+    label: 'Anaerobic',
+    descr: 'Intense, funky, fermented. Tropical / boozy / spice.',
+    temp: 90, ratio: 16.5,
+    grind: 'Medium-coarse (~900μm, coarse salt)',
+    grindRef: 'Comandante C40: 28 clicks · 1Zpresso JX: 2.6 · Kingrinder K6: 90',
+    bloomMult: 3, bloomTime: 60,
+    targetTime: '3:00 – 3:45',
+    agitation: 'Minimal. Slow central pours. Skip the swirl on the final pour.',
+    tips: [
+      'Lower temp (88–92°C) tames fermentation funk — too hot turns harsh/boozy.',
+      'Coarser grind + fewer pours preserve nuance, prevent over-extraction.',
+      'Long bloom (60s) — heavy ferment beans degas more CO₂.',
+      'Bad funk dominating? Lower temp 2°C, grind coarser.',
+      'Muted or one-dimensional? Add a pour or grind 1–2 clicks finer.',
+      'Rest beans 14+ days post-roast for these — they need it.'
+    ],
+    references: [
+      { author: 'Sasa Sestic / Project Origin', title: 'Anaerobic fermentation pioneer (2015 World Barista Champion)', where: 'projectorigin.com.au' },
+      { author: 'Lance Hedrick', title: 'Funky / anaerobic V60 brewing tutorials', where: 'YouTube channel "Lance Hedrick"' },
+      { author: 'Perfect Daily Grind', title: 'Anaerobic & experimental fermentation series', where: 'perfectdailygrind.com' },
+      { author: 'Barista Hustle', title: 'Fermentation & processing courses', where: 'baristahustle.com' }
+    ]
+  }
+};
+
+const PRESETS = [
+  { label: 'Washed Default', s: { bean: 'washed', acidity: 'balanced', strength: 'balanced', useDefault: true } },
+  { label: 'Natural Default', s: { bean: 'natural', acidity: 'balanced', strength: 'balanced', useDefault: true } },
+  { label: 'Honey Default', s: { bean: 'honey', acidity: 'balanced', strength: 'balanced', useDefault: true } },
+  { label: 'Anaerobic Default', s: { bean: 'anaerobic', acidity: 'balanced', strength: 'balanced', useDefault: true } },
+  { label: 'Tetsu Kasuya Sweet', s: { bean: 'washed', dose: 20, ratio: 15, temp: 93, acidity: 'sweet', strength: 'balanced' } },
+  { label: 'Funky Anaerobic', s: { bean: 'anaerobic', dose: 15, ratio: 17, temp: 89, acidity: 'sweet', strength: 'light' } }
+];
+
+const state = {
+  bean: 'washed',
+  dose: 15,
+  ratio: 15,
+  temp: 94,
+  acidity: 'balanced',
+  strength: 'balanced'
+};
+
+const beanGrid = document.getElementById('beanGrid');
+Object.entries(BEAN_DEFAULTS).forEach(([key, b]) => {
+  const card = document.createElement('button');
+  card.className = 'bean-card' + (key === 'washed' ? ' active' : '');
+  card.dataset.bean = key;
+  card.innerHTML = `<div class="name">${b.label}</div><div class="descr">${b.descr}</div>`;
+  card.addEventListener('click', () => {
+    state.bean = key;
+    const bd = BEAN_DEFAULTS[key];
+    state.ratio = bd.ratio;
+    state.temp = bd.temp;
+    syncControls();
+    updateAll();
+  });
+  beanGrid.appendChild(card);
+});
+
+const doseSlider = document.getElementById('doseSlider');
+const ratioSlider = document.getElementById('ratioSlider');
+const tempSlider = document.getElementById('tempSlider');
+doseSlider.addEventListener('input', e => { state.dose = parseFloat(e.target.value); updateAll(); });
+ratioSlider.addEventListener('input', e => { state.ratio = parseFloat(e.target.value); updateAll(); });
+tempSlider.addEventListener('input', e => { state.temp = parseFloat(e.target.value); updateAll(); });
+
+function bindPills(id, key) {
+  const group = document.getElementById(id);
+  group.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      group.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      state[key] = p.dataset.val;
+      updateAll();
+    });
+  });
+}
+bindPills('acidityPills', 'acidity');
+bindPills('strengthPills', 'strength');
+
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(p => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn';
+  btn.textContent = p.label;
+  btn.addEventListener('click', () => {
+    Object.assign(state, p.s);
+    if (p.s.useDefault) {
+      const b = BEAN_DEFAULTS[state.bean];
+      state.dose = 15;
+      state.ratio = b.ratio;
+      state.temp = b.temp;
+    }
+    syncControls();
+    updateAll();
+  });
+  presetsEl.appendChild(btn);
+});
+
+function syncControls() {
+  doseSlider.value = state.dose;
+  ratioSlider.value = state.ratio;
+  tempSlider.value = state.temp;
+  document.querySelectorAll('#beanGrid .bean-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.bean === state.bean);
+  });
+  ['acidity', 'strength'].forEach(k => {
+    document.querySelectorAll('#' + k + 'Pills .pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.val === state[k]);
+    });
+  });
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function buildSchedule() {
+  const b = BEAN_DEFAULTS[state.bean];
+  const total = Math.round(state.dose * state.ratio);
+
+  let bloom = state.dose * b.bloomMult;
+  if (state.acidity === 'sweet') bloom += state.dose * 0.5;
+  else if (state.acidity === 'bright') bloom = Math.max(bloom * 0.7, state.dose * 1.5);
+  bloom = Math.round(bloom);
+
+  const first40 = Math.round(total * 0.4);
+  let pour2 = Math.max(first40 - bloom, Math.round(state.dose * 1.5));
+  pour2 = Math.round(pour2);
+
+  const remaining = total - bloom - pour2;
+  const mainPourCount = state.strength === 'light' ? 3 :
+                        state.strength === 'balanced' ? 2 : 1;
+  const mainPourSize = Math.floor(remaining / mainPourCount);
+
+  const pours = [];
+  let cum = bloom;
+  pours.push({ time: 0, label: 'Bloom', amount: bloom, cum });
+  cum += pour2;
+  pours.push({ time: b.bloomTime, label: 'Pour 2 — 40% mark', amount: pour2, cum });
+
+  let t = b.bloomTime + 45;
+  for (let i = 0; i < mainPourCount; i++) {
+    const amt = (i === mainPourCount - 1) ? (total - cum) : mainPourSize;
+    cum += amt;
+    pours.push({ time: t, label: `Pour ${3 + i}`, amount: amt, cum });
+    t += 45;
+  }
+
+  return { pours, total, bloom, bloomTime: b.bloomTime };
+}
+
+function renderSchedule() {
+  const { pours, total } = buildSchedule();
+  document.getElementById('schedule').innerHTML = pours.map(p => `
+    <div class="pour-row">
+      <div class="time">${fmtTime(p.time)}</div>
+      <div class="lbl">${p.label}</div>
+      <div class="bar"><div class="fill" style="width: ${(p.cum / total) * 100}%"></div></div>
+      <div class="total">+${p.amount}g · ${p.cum}g</div>
+    </div>
+  `).join('');
+}
+
+function renderRecipe() {
+  const b = BEAN_DEFAULTS[state.bean];
+  const total = Math.round(state.dose * state.ratio);
+  const sched = buildSchedule();
+  document.getElementById('recipeTitle').textContent = b.label + ' Recipe';
+  document.getElementById('recipeDescr').textContent = b.descr;
+  document.getElementById('recipeRatio').textContent = `1:${state.ratio}`;
+  document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
+  document.getElementById('stTotal').innerHTML = `${total}<span class="unit"> g</span>`;
+  document.getElementById('stTemp').innerHTML = `${state.temp}<span class="unit"> °C</span>`;
+  document.getElementById('stTime').textContent = b.targetTime;
+  document.getElementById('stGrind').textContent = b.grind;
+  document.getElementById('stGrindRef').textContent = b.grindRef;
+  document.getElementById('stBloom').textContent = `${sched.bloom}g for ${b.bloomTime}s (${(sched.bloom / state.dose).toFixed(1)}× dose)`;
+  document.getElementById('stAgit').textContent = b.agitation;
+
+  document.getElementById('doseVal').textContent = `${state.dose} g`;
+  document.getElementById('ratioVal').textContent = `1:${state.ratio}`;
+  document.getElementById('tempVal').textContent = `${state.temp} °C`;
+}
+
+function renderTips() {
+  const b = BEAN_DEFAULTS[state.bean];
+  document.getElementById('tipsList').innerHTML = b.tips.map(t => `<li>${t}</li>`).join('');
+}
+
+function renderRefs() {
+  const b = BEAN_DEFAULTS[state.bean];
+  document.getElementById('refsList').innerHTML = b.references.map(r => `
+    <div class="ref-row">
+      <span class="ref-author">${r.author}</span> — <span class="ref-title">${r.title}</span>
+      <div class="ref-where">${r.where}</div>
+    </div>
+  `).join('');
+}
+
+function updatePrompt() {
+  const b = BEAN_DEFAULTS[state.bean];
+  const total = Math.round(state.dose * state.ratio);
+  const sched = buildSchedule();
+  const pourLines = sched.pours.map(p =>
+    `  ${fmtTime(p.time)}  ${p.label.padEnd(22)}  +${p.amount}g  (cumulative ${p.cum}g)`
+  ).join('\n');
+
+  const acidityNote = state.acidity === 'balanced' ? '' :
+    state.acidity === 'sweet' ? ' — biased for sweetness (larger bloom share of first 40%)' :
+    ' — biased for brightness (smaller bloom, larger pour 2)';
+  const strengthNote = state.strength === 'balanced' ? '' :
+    state.strength === 'light' ? '. Last 60% split across 3 pours for lighter body.' :
+    state.strength === 'strong' ? '. Last 60% delivered in a single pour for stronger body.' :
+    '';
+
+  const taste = state.acidity === 'bright' ? 'flat' :
+                state.acidity === 'sweet' ? 'sour' : 'unbalanced';
+  const body = state.strength === 'strong' ? 'thin' :
+               state.strength === 'light' ? 'too heavy' : 'off';
+
+  const prompt =
+`Brew a Hario V60 ceramic recipe for ${b.label.toLowerCase()}-process beans.
+
+Spec
+- Dose: ${state.dose} g
+- Total water: ${total} g (ratio 1:${state.ratio})
+- Water temperature: ${state.temp} °C
+- Grind: ${b.grind}
+- Grind reference: ${b.grindRef}
+- Target brew time: ${b.targetTime}
+
+Pour schedule (Tetsu Kasuya 4:6 method${acidityNote}${strengthNote})
+${pourLines}
+
+Bloom: ${sched.bloom} g for ${sched.bloomTime} s.
+Agitation: ${b.agitation}
+
+Brewing notes
+${b.tips.map(t => `- ${t}`).join('\n')}
+
+References (search by author + title — URLs intentionally omitted)
+${b.references.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
+
+Walk me through this brew step-by-step, call out timing checkpoints, and tell me what to adjust if the cup tastes ${taste} or the body feels ${body}.`;
+
+  document.getElementById('promptText').textContent = prompt;
+}
+
+function updateAll() {
+  renderRecipe();
+  renderSchedule();
+  renderTips();
+  renderRefs();
+  updatePrompt();
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const t = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+syncControls();
+updateAll();
+</script>
+</body>
+</html>

@@ -191,7 +191,7 @@
 <body>
 <header>
   <h1>V60 Ceramic Recipe Explorer</h1>
-  <span class="sub">Hario V60 02 · AeroPress champion · Tune by method & bean</span>
+  <span class="sub">Hario V60 02 · Simple AeroPress recipes · Tune by method & bean</span>
 </header>
 <main>
   <aside class="controls">
@@ -200,6 +200,15 @@
       <div class="pill-group" id="methodPills">
         <div class="pill active" data-val="v60">Hario V60</div>
         <div class="pill" data-val="aeropress">AeroPress</div>
+      </div>
+    </div>
+
+    <div class="group" id="grpAeroStyle">
+      <div class="group-title">AeroPress Recipe</div>
+      <div class="pill-group" id="aeroStylePills">
+        <div class="pill active" data-val="quick">Quick</div>
+        <div class="pill" data-val="standard">Standard</div>
+        <div class="pill" data-val="inverted">Inverted</div>
       </div>
     </div>
 
@@ -272,7 +281,7 @@
     </div>
 
     <div class="schedule-card">
-      <h3>Pour Schedule</h3>
+      <h3 id="scheduleTitle">Pour Schedule</h3>
       <div id="schedule"></div>
     </div>
 
@@ -394,48 +403,76 @@ const BEAN_DEFAULTS = {
   }
 };
 
-// 2023 World AeroPress Championship — 1st place, Tay Wipvasutt.
-// Brewed on a washed Kenya AB (Karindundu, Nyeri). Dose-scalable from baseDose.
-const AEROPRESS = {
-  label: 'AeroPress Champion',
-  descr: 'Washed Kenya AB · 2023 World AeroPress Championship winner (Tay Wipvasutt). Inverted, bypass-diluted.',
-  baseDose: 18,
-  temp: 89,
-  grind: 'Coarse (~900μm)',
-  grindRef: '1Zpresso ZP6: 65 clicks · Comandante C40: 29 clicks',
-  orientation: 'Inverted · 1 paper filter (rinsed)',
-  brewWater: 100,   // hot water poured over coffee at 0:00
-  bypassRT: 40,     // room-temp bypass after plunge
-  bypassHot: 40,    // hot bypass after plunge
-  targetTime: '~2:05',
-  stir: 'Stir circularly with a chopstick — 5s at 0:30 and 5s at 0:55. Gentle, even.',
-  plunge: 'Press plunger up to expel air, cap, flip, then plunge ~30s from 1:35 (yield ~75g).',
-  // Fixed-timestamp steps; `water` (added at that step) scales with dose.
-  steps: [
-    { time: 0,   label: 'Pour hot water',     water: 'brewWater' },
-    { time: 30,  label: 'Stir 5s',            water: 0 },
-    { time: 45,  label: 'Add remaining 2g',   water: 0 },
-    { time: 55,  label: 'Stir 5s',            water: 0 },
-    { time: 75,  label: 'Expel air · flip',   water: 0 },
-    { time: 95,  label: 'Plunge ~30s',        water: 0 },
-    { time: 125, label: 'Bypass — room temp', water: 'bypassRT' },
-    { time: 125, label: 'Bypass — hot',       water: 'bypassHot' }
-  ],
-  tips: [
-    'Concentrate brew (1:5.5) then bypass-diluted to ~1:8.6 — strong, clean, sweet.',
-    'Split dose: 16g in first, add the last 2g at 0:45 for a brighter top-note.',
-    'Coarse grind + short 100°C-adjacent steep keeps Kenyan acidity crisp, not sharp.',
-    'Bypass with room-temp water first drops temp fast and lifts aromatics.',
-    'Too sharp/sour? Grind finer or raise temp 1°C. Flat? Cut bypass, grind finer.',
-    'Inverted lets the full steep happen before any drawdown — keep the cap sealed.'
-  ],
-  references: [
-    { author: 'Tay Wipvasutt', title: '2023 World AeroPress Championship — 1st place recipe', where: 'worldaeropresschampionship.com' },
-    { author: 'World AeroPress Championship', title: 'Official winning recipes archive', where: 'worldaeropresschampionship.com/pages/recipes' },
-    { author: 'Fieldwork Coffee', title: 'Roaster of the championship Kenya AB (Karindundu, Nyeri)', where: 'fieldworkcoffee' },
-    { author: 'Cafe Imports', title: 'Green sourcing — Kenya AB, Nyeri', where: 'cafeimports.com' }
-  ]
+// Simple, everyday AeroPress recipes. Each recipe scales from its base dose.
+const AEROPRESS_RECIPES = {
+  quick: {
+    label: 'Quick AeroPress',
+    descr: 'A simple, no-bypass daily cup. Inverted for a full, forgiving steep.',
+    baseDose: 15, temp: 90, grind: 'Medium-fine',
+    grindRef: '1Zpresso K-Ultra: 400–600',
+    orientation: 'Inverted · 1 paper filter (rinsed)', brewWater: 230, targetTime: '~2:00',
+    stir: 'Stir gently for 5 seconds after pouring.',
+    plunge: 'At 1:30, attach cap, flip carefully, then press gently for ~30 seconds. Stop at the hiss.',
+    steps: [
+      { time: 0, label: 'Pour all water', water: 'brewWater' },
+      { time: 15, label: 'Stir gently 5s', water: 0 },
+      { time: 90, label: 'Cap · flip', water: 0 },
+      { time: 95, label: 'Press gently ~30s', water: 0 }
+    ],
+    tips: [
+      'Use the Quick recipe when you want one repeatable routine with no bypass or split dose.',
+      'Sour or thin? Grind finer. Bitter or slow to press? Grind coarser.',
+      'Keep the press gentle; forcing it through the hiss can add bitterness.'
+    ]
+  },
+  standard: {
+    label: 'AeroPress Standard',
+    descr: 'Upright brewing with a short bloom and no flip — clean and low-risk.',
+    baseDose: 15, temp: 92, grind: 'Medium-fine',
+    grindRef: '1Zpresso K-Ultra: 400–600',
+    orientation: 'Standard / upright · 1 paper filter (rinsed)', brewWater: 250, targetTime: '~2:15',
+    stir: 'Stir gently for 5 seconds after the bloom and once after filling.',
+    plunge: 'At 1:45, press gently for ~30 seconds. Stop at the hiss.',
+    steps: [
+      { time: 0, label: 'Bloom', water: 'bloomWater' },
+      { time: 30, label: 'Stir gently 5s', water: 0 },
+      { time: 30, label: 'Fill to total water', water: 'remainingWater' },
+      { time: 40, label: 'Stir gently 5s', water: 0 },
+      { time: 105, label: 'Press gently ~30s', water: 0 }
+    ],
+    tips: [
+      'Choose Standard if you prefer not to flip a full AeroPress.',
+      'A little drip-through is normal; start pressing when the timer reaches 1:45.',
+      'Sour or thin? Grind finer. Bitter or slow to press? Grind coarser.'
+    ]
+  },
+  inverted: {
+    label: 'AeroPress Inverted',
+    descr: 'Classic inverted immersion: simple, full-bodied, and no early drip-through.',
+    baseDose: 15, temp: 90, grind: 'Medium-fine',
+    grindRef: '1Zpresso K-Ultra: 400–600',
+    orientation: 'Inverted · 1 paper filter (rinsed)', brewWater: 230, targetTime: '~2:15',
+    stir: 'Stir gently for 10 seconds after pouring.',
+    plunge: 'At 1:45, attach cap, flip carefully, then press gently for ~30 seconds. Stop at the hiss.',
+    steps: [
+      { time: 0, label: 'Pour all water', water: 'brewWater' },
+      { time: 0, label: 'Stir gently 10s', water: 0 },
+      { time: 105, label: 'Cap · flip', water: 0 },
+      { time: 110, label: 'Press gently ~30s', water: 0 }
+    ],
+    tips: [
+      'Choose Inverted for a slightly fuller, more immersion-forward cup.',
+      'Flip over a sturdy mug, keep the cap secure, and use two hands.',
+      'Sour or thin? Grind finer. Bitter or slow to press? Grind coarser.'
+    ]
+  }
 };
+
+const AEROPRESS_REFERENCES = [
+  { author: 'AeroPress', title: 'Official brewing guides', where: 'aeropress.com' },
+  { author: 'Alan Adler', title: 'AeroPress inventor and original brew method', where: 'aeropress.com' },
+  { author: 'James Hoffmann', title: 'AeroPress technique and recipe guides', where: 'YouTube' }
+];
 
 const PRESETS = [
   { label: 'Washed Default', s: { bean: 'washed', acidity: 'balanced', strength: 'balanced', useDefault: true } },
@@ -444,11 +481,14 @@ const PRESETS = [
   { label: 'Anaerobic Default', s: { bean: 'anaerobic', acidity: 'balanced', strength: 'balanced', useDefault: true } },
   { label: 'Tetsu Kasuya Sweet', s: { bean: 'washed', dose: 20, ratio: 15, temp: 93, acidity: 'sweet', strength: 'balanced' } },
   { label: 'Funky Anaerobic', s: { bean: 'anaerobic', dose: 15, ratio: 17, temp: 89, acidity: 'sweet', strength: 'light' } },
-  { label: 'AeroPress Champion', s: { method: 'aeropress', dose: 18, temp: 89 } }
+  { label: 'AeroPress Quick', s: { method: 'aeropress', aeroStyle: 'quick', dose: 15, temp: 90 } },
+  { label: 'AeroPress Standard', s: { method: 'aeropress', aeroStyle: 'standard', dose: 15, temp: 92 } },
+  { label: 'AeroPress Inverted', s: { method: 'aeropress', aeroStyle: 'inverted', dose: 15, temp: 90 } }
 ];
 
 const state = {
   method: 'v60',
+  aeroStyle: 'quick',
   bean: 'washed',
   dose: 15,
   ratio: 15,
@@ -502,8 +542,9 @@ methodGroup.querySelectorAll('.pill').forEach(p => {
     p.classList.add('active');
     state.method = p.dataset.val;
     if (state.method === 'aeropress') {
-      state.dose = AEROPRESS.baseDose;
-      state.temp = AEROPRESS.temp;
+      const a = AEROPRESS_RECIPES[state.aeroStyle];
+      state.dose = a.baseDose;
+      state.temp = a.temp;
     } else {
       const b = BEAN_DEFAULTS[state.bean];
       state.dose = 15;
@@ -515,9 +556,23 @@ methodGroup.querySelectorAll('.pill').forEach(p => {
   });
 });
 
+const aeroStyleGroup = document.getElementById('aeroStylePills');
+aeroStyleGroup.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    state.aeroStyle = p.dataset.val;
+    const a = AEROPRESS_RECIPES[state.aeroStyle];
+    state.method = 'aeropress';
+    state.dose = a.baseDose;
+    state.temp = a.temp;
+    syncControls();
+    updateAll();
+  });
+});
+
 // Show/hide control groups that only apply to a given method.
 function applyMethod() {
   const aero = state.method === 'aeropress';
+  document.getElementById('grpAeroStyle').style.display = aero ? '' : 'none';
   document.getElementById('grpBean').style.display = aero ? 'none' : '';
   document.getElementById('ratioWrap').style.display = aero ? 'none' : '';
   document.getElementById('grpAcidity').style.display = aero ? 'none' : '';
@@ -551,6 +606,9 @@ function syncControls() {
   document.querySelectorAll('#methodPills .pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.method);
   });
+  document.querySelectorAll('#aeroStylePills .pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === state.aeroStyle);
+  });
   doseSlider.value = state.dose;
   ratioSlider.value = state.ratio;
   tempSlider.value = state.temp;
@@ -571,13 +629,15 @@ function fmtTime(sec) {
 }
 
 function buildAeroSchedule() {
-  const a = AEROPRESS;
+  const a = AEROPRESS_RECIPES[state.aeroStyle];
   const sf = state.dose / a.baseDose;
   const sc = v => Math.round(v * sf);
-  const total = sc(a.brewWater + a.bypassRT + a.bypassHot); // total water used (brew + bypass); ~25g retained in puck → ~155g in cup at base dose
+  const bloomWater = Math.round(state.dose * 3);
+  const total = sc(a.brewWater);
   let cum = 0;
   const pours = a.steps.map(s => {
-    const amount = s.water === 0 ? 0 : sc(a[s.water]);
+    const amount = s.water === 0 ? 0 : s.water === 'bloomWater' ? bloomWater :
+      s.water === 'remainingWater' ? total - bloomWater : sc(a[s.water]);
     cum += amount;
     return { time: s.time, label: s.label, amount, cum };
   });
@@ -638,18 +698,18 @@ function renderRecipe() {
   document.getElementById('tempVal').textContent = `${state.temp} °C`;
 
   if (state.method === 'aeropress') {
-    const a = AEROPRESS;
+    const a = AEROPRESS_RECIPES[state.aeroStyle];
     const sched = buildSchedule();
     document.getElementById('recipeTitle').textContent = a.label;
     document.getElementById('recipeDescr').textContent = a.descr;
-    document.getElementById('recipeRatio').textContent = 'concentrate + bypass';
+    document.getElementById('recipeRatio').textContent = `1:${(sched.total / state.dose).toFixed(1)}`;
     document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
     document.getElementById('stTotal').innerHTML = `${sched.total}<span class="unit"> g</span>`;
     document.getElementById('stTemp').innerHTML = `${state.temp}<span class="unit"> °C</span>`;
     document.getElementById('stTime').textContent = a.targetTime;
     document.getElementById('stGrind').textContent = a.grind + ' · ' + a.orientation;
     document.getElementById('stGrindRef').textContent = a.grindRef;
-    document.getElementById('stBloomLbl').textContent = 'Plunge:';
+    document.getElementById('stBloomLbl').textContent = 'Press:';
     document.getElementById('stBloom').textContent = a.plunge;
     document.getElementById('stAgitLbl').textContent = 'Stir:';
     document.getElementById('stAgit').textContent = a.stir;
@@ -679,12 +739,12 @@ function renderRecipe() {
 }
 
 function renderTips() {
-  const b = state.method === 'aeropress' ? AEROPRESS : BEAN_DEFAULTS[state.bean];
+  const b = state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] : BEAN_DEFAULTS[state.bean];
   document.getElementById('tipsList').innerHTML = b.tips.map(t => `<li>${t}</li>`).join('');
 }
 
 function renderRefs() {
-  const b = state.method === 'aeropress' ? AEROPRESS : BEAN_DEFAULTS[state.bean];
+  const b = state.method === 'aeropress' ? { references: AEROPRESS_REFERENCES } : BEAN_DEFAULTS[state.bean];
   document.getElementById('refsList').innerHTML = b.references.map(r => `
     <div class="ref-row">
       <span class="ref-author">${r.author}</span> — <span class="ref-title">${r.title}</span>
@@ -744,42 +804,43 @@ Walk me through this brew step-by-step, call out timing checkpoints, and tell me
 }
 
 function updateAeroPrompt() {
-  const a = AEROPRESS;
+  const a = AEROPRESS_RECIPES[state.aeroStyle];
   const sched = buildSchedule();
   const pourLines = sched.pours.map(p =>
     `  ${fmtTime(p.time)}  ${p.label.padEnd(22)}  ${p.amount ? '+' + p.amount + 'g' : '     '}  (cumulative ${p.cum}g)`
   ).join('\n');
 
   const prompt =
-`Brew the 2023 World AeroPress Championship winning recipe (Tay Wipvasutt) for washed beans.
+`Brew a simple ${a.label} recipe for coffee.
 
 Spec
 - Brewer: ${a.orientation}
-- Dose: ${state.dose} g (split: ${Math.round(state.dose * 16 / a.baseDose)}g in first, add the rest at 0:45)
+- Dose: ${state.dose} g
 - Water temperature: ${state.temp} °C
 - Grind: ${a.grind}
 - Grind reference: ${a.grindRef}
-- Total in-cup water: ${sched.total} g (concentrate brew + bypass dilution)
+- Total water: ${sched.total} g (ratio 1:${(sched.total / state.dose).toFixed(1)})
 - Target brew time: ${a.targetTime}
 
 Step schedule
 ${pourLines}
 
 Stir: ${a.stir}
-Plunge: ${a.plunge}
+Press: ${a.plunge}
 
 Brewing notes
 ${a.tips.map(t => `- ${t}`).join('\n')}
 
 References (search by author + title — URLs intentionally omitted)
-${a.references.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
+${AEROPRESS_REFERENCES.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
 
-Walk me through this brew step-by-step, call out the timing checkpoints (stir, add coffee, flip, plunge, bypass), and tell me what to adjust if the cup tastes sharp/sour or flat.`;
+Walk me through this brew step-by-step, call out the timing checkpoints, and tell me what to adjust if the cup tastes sour/thin or bitter.`;
 
   document.getElementById('promptText').textContent = prompt;
 }
 
 function updateAll() {
+  document.getElementById('scheduleTitle').textContent = state.method === 'aeropress' ? 'Brew Schedule' : 'Pour Schedule';
   renderRecipe();
   renderSchedule();
   renderTips();

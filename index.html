@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>V60 Ceramic Recipe Explorer</title>
+<title>Pour-Over Recipe Explorer</title>
 <style>
   :root {
     --bg: #1a1614;
@@ -190,8 +190,8 @@
 </head>
 <body>
 <header>
-  <h1>V60 Ceramic Recipe Explorer</h1>
-  <span class="sub">Hario V60 02 · Simple AeroPress recipes · Tune by method & bean</span>
+  <h1>Pour-Over Recipe Explorer</h1>
+  <span class="sub">Hario V60 02 · ORIGAMI Dripper · Simple AeroPress recipes</span>
 </header>
 <main>
   <aside class="controls">
@@ -199,7 +199,16 @@
       <div class="group-title">Brew Method</div>
       <div class="pill-group" id="methodPills">
         <div class="pill active" data-val="v60">Hario V60</div>
+        <div class="pill" data-val="origami">ORIGAMI</div>
         <div class="pill" data-val="aeropress">AeroPress</div>
+      </div>
+    </div>
+
+    <div class="group" id="grpOrigamiFilter">
+      <div class="group-title">ORIGAMI Filter</div>
+      <div class="pill-group" id="origamiFilterPills">
+        <div class="pill active" data-val="cone">Cone</div>
+        <div class="pill" data-val="wave">Wave</div>
       </div>
     </div>
 
@@ -474,6 +483,34 @@ const AEROPRESS_REFERENCES = [
   { author: 'James Hoffmann', title: 'AeroPress technique and recipe guides', where: 'YouTube' }
 ];
 
+// ORIGAMI's 20 ribs maintain a clear air channel around the paper. The brewer
+// accepts both filters, so the filter is an explicit recipe choice.
+const ORIGAMI_RECIPES = {
+  cone: {
+    label: 'ORIGAMI Cone Filter', descr: 'Bright, transparent, V60-like cup with direct flow control.',
+    baseDose: 15, ratio: 16, temp: 93, grind: 'Medium-fine (~700μm)',
+    grindRef: '1Zpresso K-Ultra: start ~650–750', targetTime: '2:30 – 3:00',
+    agitation: 'Rinse and preheat well. Use gentle center-out spirals; swirl only to level a visibly uneven bed.',
+    steps: [{ time: 0, label: 'Bloom', water: 45 }, { time: 45, label: 'Pour 2', water: 95 }, { time: 85, label: 'Pour 3', water: 'remainingWater' }],
+    tips: ['Cone paper offers the most control and a clearer, brighter cup.', 'The ribbed ORIGAMI is fast-flowing: if it races, pour more gently or grind a little finer.', 'Sour and quick? Grind finer. Bitter or slow? Grind coarser or reduce agitation.', 'Thoroughly preheat porcelain; it has more thermal mass than the resin AIR.']
+  },
+  wave: {
+    label: 'ORIGAMI Wave Filter', descr: 'Steadier, sweeter, more rounded cup with a little more body.',
+    baseDose: 15, ratio: 16, temp: 93, grind: 'Medium (~750μm)',
+    grindRef: '1Zpresso K-Ultra: start ~700–800', targetTime: '2:50 – 3:30',
+    agitation: 'Rinse and preheat well. Use calm, centered pulse pours; avoid forceful spirals that can stall the flat bed.',
+    steps: [{ time: 0, label: 'Bloom', water: 45 }, { time: 40, label: 'Pour 2', water: 65 }, { time: 70, label: 'Pour 3', water: 65 }, { time: 100, label: 'Pour 4', water: 'remainingWater' }],
+    tips: ['Wave paper is the steadier, more forgiving option for rounded sweetness.', 'Keep water level modest and pour centrally—the paper is more resistant than cone paper.', 'If it stalls or tastes dry, grind coarser first; if it is fast and thin, grind finer.', 'Different wave papers flow differently; dial in each paper rather than copying cone settings.']
+  }
+};
+
+const ORIGAMI_REFERENCES = [
+  { author: 'ORIGAMI Japan', title: 'ORIGAMI Dripper product guide', where: 'origami-kai.com — 20 ribs; compatible with cone and wave filters' },
+  { author: 'ORIGAMI Japan', title: 'How to Choose an ORIGAMI Dripper', where: 'origami-kai.com — cone for precise control; wave for stable extraction' },
+  { author: 'Carlos Medina', title: '2023 World Brewers Cup Finals', where: 'World Coffee Championships / YouTube' },
+  { author: 'Kurasu Kyoto', title: 'ORIGAMI Dripper Brew Guide', where: 'YouTube' }
+];
+
 const PRESETS = [
   { label: 'Washed Default', s: { bean: 'washed', acidity: 'balanced', strength: 'balanced', useDefault: true } },
   { label: 'Natural Default', s: { bean: 'natural', acidity: 'balanced', strength: 'balanced', useDefault: true } },
@@ -481,6 +518,8 @@ const PRESETS = [
   { label: 'Anaerobic Default', s: { bean: 'anaerobic', acidity: 'balanced', strength: 'balanced', useDefault: true } },
   { label: 'Tetsu Kasuya Sweet', s: { bean: 'washed', dose: 20, ratio: 15, temp: 93, acidity: 'sweet', strength: 'balanced' } },
   { label: 'Funky Anaerobic', s: { bean: 'anaerobic', dose: 15, ratio: 17, temp: 89, acidity: 'sweet', strength: 'light' } },
+  { label: 'ORIGAMI Cone', s: { method: 'origami', origamiFilter: 'cone', dose: 15, ratio: 16, temp: 93 } },
+  { label: 'ORIGAMI Wave', s: { method: 'origami', origamiFilter: 'wave', dose: 15, ratio: 16, temp: 93 } },
   { label: 'AeroPress Quick', s: { method: 'aeropress', aeroStyle: 'quick', dose: 15, temp: 90 } },
   { label: 'AeroPress Standard', s: { method: 'aeropress', aeroStyle: 'standard', dose: 15, temp: 92 } },
   { label: 'AeroPress Inverted', s: { method: 'aeropress', aeroStyle: 'inverted', dose: 15, temp: 90 } }
@@ -488,6 +527,7 @@ const PRESETS = [
 
 const state = {
   method: 'v60',
+  origamiFilter: 'cone',
   aeroStyle: 'quick',
   bean: 'washed',
   dose: 15,
@@ -534,6 +574,7 @@ function bindPills(id, key) {
 }
 bindPills('acidityPills', 'acidity');
 bindPills('strengthPills', 'strength');
+bindPills('origamiFilterPills', 'origamiFilter');
 
 const methodGroup = document.getElementById('methodPills');
 methodGroup.querySelectorAll('.pill').forEach(p => {
@@ -545,6 +586,11 @@ methodGroup.querySelectorAll('.pill').forEach(p => {
       const a = AEROPRESS_RECIPES[state.aeroStyle];
       state.dose = a.baseDose;
       state.temp = a.temp;
+    } else if (state.method === 'origami') {
+      const o = ORIGAMI_RECIPES[state.origamiFilter];
+      state.dose = o.baseDose;
+      state.ratio = o.ratio;
+      state.temp = o.temp;
     } else {
       const b = BEAN_DEFAULTS[state.bean];
       state.dose = 15;
@@ -572,11 +618,13 @@ aeroStyleGroup.querySelectorAll('.pill').forEach(p => {
 // Show/hide control groups that only apply to a given method.
 function applyMethod() {
   const aero = state.method === 'aeropress';
+  const origami = state.method === 'origami';
   document.getElementById('grpAeroStyle').style.display = aero ? '' : 'none';
-  document.getElementById('grpBean').style.display = aero ? 'none' : '';
+  document.getElementById('grpOrigamiFilter').style.display = origami ? '' : 'none';
+  document.getElementById('grpBean').style.display = (aero || origami) ? 'none' : '';
   document.getElementById('ratioWrap').style.display = aero ? 'none' : '';
-  document.getElementById('grpAcidity').style.display = aero ? 'none' : '';
-  document.getElementById('grpStrength').style.display = aero ? 'none' : '';
+  document.getElementById('grpAcidity').style.display = (aero || origami) ? 'none' : '';
+  document.getElementById('grpStrength').style.display = (aero || origami) ? 'none' : '';
   // AeroPress runs near-boiling; widen the temp slider range when active.
   tempSlider.min = aero ? '80' : '85';
   tempSlider.max = aero ? '96' : '96';
@@ -608,6 +656,9 @@ function syncControls() {
   });
   document.querySelectorAll('#aeroStylePills .pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.aeroStyle);
+  });
+  document.querySelectorAll('#origamiFilterPills .pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === state.origamiFilter);
   });
   doseSlider.value = state.dose;
   ratioSlider.value = state.ratio;
@@ -644,8 +695,22 @@ function buildAeroSchedule() {
   return { pours, total };
 }
 
+function buildOrigamiSchedule() {
+  const o = ORIGAMI_RECIPES[state.origamiFilter];
+  const scale = state.dose / o.baseDose;
+  const total = Math.round(state.dose * state.ratio);
+  let cum = 0;
+  const pours = o.steps.map(s => {
+    const amount = s.water === 'remainingWater' ? total - cum : Math.round(s.water * scale);
+    cum += amount;
+    return { time: s.time, label: s.label, amount, cum };
+  });
+  return { pours, total };
+}
+
 function buildSchedule() {
   if (state.method === 'aeropress') return buildAeroSchedule();
+  if (state.method === 'origami') return buildOrigamiSchedule();
   const b = BEAN_DEFAULTS[state.bean];
   const total = Math.round(state.dose * state.ratio);
 
@@ -716,6 +781,25 @@ function renderRecipe() {
     return;
   }
 
+  if (state.method === 'origami') {
+    const o = ORIGAMI_RECIPES[state.origamiFilter];
+    const sched = buildSchedule();
+    document.getElementById('recipeTitle').textContent = o.label;
+    document.getElementById('recipeDescr').textContent = o.descr;
+    document.getElementById('recipeRatio').textContent = `1:${state.ratio}`;
+    document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
+    document.getElementById('stTotal').innerHTML = `${sched.total}<span class="unit"> g</span>`;
+    document.getElementById('stTemp').innerHTML = `${state.temp}<span class="unit"> °C</span>`;
+    document.getElementById('stTime').textContent = o.targetTime;
+    document.getElementById('stGrind').textContent = o.grind;
+    document.getElementById('stGrindRef').textContent = o.grindRef;
+    document.getElementById('stBloomLbl').textContent = 'Filter:';
+    document.getElementById('stBloom').textContent = `${state.origamiFilter === 'cone' ? 'Cone paper — precise, fast-flowing' : 'Wave paper — steadier, more resistant'} · rinse thoroughly`;
+    document.getElementById('stAgitLbl').textContent = 'Agitation:';
+    document.getElementById('stAgit').textContent = o.agitation;
+    return;
+  }
+
   const b = BEAN_DEFAULTS[state.bean];
   const total = Math.round(state.dose * state.ratio);
   const sched = buildSchedule();
@@ -739,13 +823,15 @@ function renderRecipe() {
 }
 
 function renderTips() {
-  const b = state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] : BEAN_DEFAULTS[state.bean];
+  const b = state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] :
+            state.method === 'origami' ? ORIGAMI_RECIPES[state.origamiFilter] : BEAN_DEFAULTS[state.bean];
   document.getElementById('tipsList').innerHTML = b.tips.map(t => `<li>${t}</li>`).join('');
 }
 
 function renderRefs() {
-  const b = state.method === 'aeropress' ? { references: AEROPRESS_REFERENCES } : BEAN_DEFAULTS[state.bean];
-  document.getElementById('refsList').innerHTML = b.references.map(r => `
+  const refs = state.method === 'aeropress' ? AEROPRESS_REFERENCES :
+               state.method === 'origami' ? ORIGAMI_REFERENCES : BEAN_DEFAULTS[state.bean].references;
+  document.getElementById('refsList').innerHTML = refs.map(r => `
     <div class="ref-row">
       <span class="ref-author">${r.author}</span> — <span class="ref-title">${r.title}</span>
       <div class="ref-where">${r.where}</div>
@@ -755,6 +841,7 @@ function renderRefs() {
 
 function updatePrompt() {
   if (state.method === 'aeropress') { updateAeroPrompt(); return; }
+  if (state.method === 'origami') { updateOrigamiPrompt(); return; }
   const b = BEAN_DEFAULTS[state.bean];
   const total = Math.round(state.dose * state.ratio);
   const sched = buildSchedule();
@@ -801,6 +888,39 @@ ${b.references.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
 Walk me through this brew step-by-step, call out timing checkpoints, and tell me what to adjust if the cup tastes ${taste} or the body feels ${body}.`;
 
   document.getElementById('promptText').textContent = prompt;
+}
+
+function updateOrigamiPrompt() {
+  const o = ORIGAMI_RECIPES[state.origamiFilter];
+  const sched = buildSchedule();
+  const pourLines = sched.pours.map(p =>
+    `  ${fmtTime(p.time)}  ${p.label.padEnd(14)}  +${p.amount}g  (cumulative ${p.cum}g)`
+  ).join('\n');
+  document.getElementById('promptText').textContent =
+`Brew an ORIGAMI Dripper recipe with a ${state.origamiFilter} filter.
+
+Spec
+- Dose: ${state.dose} g
+- Total water: ${sched.total} g (ratio 1:${state.ratio})
+- Water temperature: ${state.temp} °C
+- Grind: ${o.grind}
+- K-Ultra reference: ${o.grindRef}
+- Target brew time: ${o.targetTime}
+
+Pour schedule
+${pourLines}
+
+Technique
+- ${o.agitation}
+- Rinse the paper and thoroughly preheat the dripper, particularly if it is porcelain.
+
+Dial-in notes
+${o.tips.map(t => `- ${t}`).join('\n')}
+
+References
+${ORIGAMI_REFERENCES.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
+
+Walk me through the brew and recommend one adjustment if it is sour/thin and one if it is bitter/dry.`;
 }
 
 function updateAeroPrompt() {

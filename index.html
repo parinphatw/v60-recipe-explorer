@@ -279,6 +279,14 @@
       </div>
     </div>
 
+    <div class="group" id="grpBrewStyle">
+      <div class="group-title">Brew Style</div>
+      <div class="pill-group" id="brewStylePills">
+        <div class="pill active" data-val="hot">Hot</div>
+        <div class="pill" data-val="iced">Iced / Flash Brew</div>
+      </div>
+    </div>
+
     <div class="group" id="grpOrigamiFilter">
       <div class="group-title">ORIGAMI Filter</div>
       <div class="pill-group" id="origamiFilterPills">
@@ -354,7 +362,7 @@
       </div>
       <div class="stat-grid">
         <div class="stat"><div class="label">Dose</div><div class="value" id="stDose">15<span class="unit"> g</span></div></div>
-        <div class="stat"><div class="label">Total Water</div><div class="value" id="stTotal">225<span class="unit"> g</span></div></div>
+        <div class="stat"><div class="label" id="stTotalLbl">Total Water</div><div class="value" id="stTotal">225<span class="unit"> g</span></div></div>
         <div class="stat"><div class="label">Temperature</div><div class="value" id="stTemp">94<span class="unit"> °C</span></div></div>
         <div class="stat"><div class="label">Brew Time</div><div class="value" id="stTime">~3:00</div></div>
       </div>
@@ -588,8 +596,57 @@ const ORIGAMI_REFERENCES = [
   { author: 'Kurasu Kyoto', title: 'ORIGAMI Dripper Brew Guide', where: 'YouTube' }
 ];
 
+// Flash-brew recipes use 80% hot water and 20% ice for a final 1:15 beverage.
+// Ice is weighed in the server; the schedule tracks only the hot water.
+const ICED_RECIPES = {
+  v60: {
+    label: 'Iced V60 Flash Brew', descr: 'Bright, juicy, and transparent — hot extraction flash-chilled over ice.',
+    baseDose: 15, ratio: 15, hotWater: 180, ice: 45, temp: 94,
+    grind: 'Medium-fine (~700μm)', grindRef: '1Zpresso K-Ultra: start ~650–725', targetTime: '2:20 – 2:55',
+    orientation: 'Hario V60 ceramic · 45 g ice in server',
+    agitation: 'Gently swirl the bloom. Use steady pours and avoid washing the paper wall.',
+    steps: [{ time: 0, label: 'Bloom', water: 45 }, { time: 45, label: 'Pour 2', water: 70 }, { time: 80, label: 'Pour 3', water: 'remainingWater' }],
+    tips: ['Preheat the ceramic V60 and rinse the paper thoroughly.', 'Sour, sharp, or thin? Grind finer or raise temperature 1–2°C.', 'Dry or bitter? Grind coarser and reduce agitation.', 'Good flavour but weak? Reduce ice slightly; do not reduce the hot brew water first.']
+  },
+  origamiCone: {
+    label: 'Iced ORIGAMI Cone Flash Brew', descr: 'Clear and lively, with fast cone-filter flow and direct control.',
+    baseDose: 15, ratio: 15, hotWater: 180, ice: 45, temp: 94,
+    grind: 'Medium-fine (~700μm)', grindRef: '1Zpresso K-Ultra: start ~650–725', targetTime: '2:15 – 2:45',
+    orientation: 'ORIGAMI cone filter · 45 g ice in server',
+    agitation: 'Rinse and preheat well. Gentle center-out pours; swirl only to level an uneven bed.',
+    steps: [{ time: 0, label: 'Bloom', water: 45 }, { time: 45, label: 'Pour 2', water: 70 }, { time: 80, label: 'Pour 3', water: 'remainingWater' }],
+    tips: ['The ribbed ORIGAMI cone can run fast: if it tastes thin, grind finer before adding agitation.', 'Preheat porcelain thoroughly.', 'Sour and quick? Grind finer. Bitter or slow? Grind coarser or reduce agitation.', 'Swirl the server after drawdown to melt and integrate the ice.']
+  },
+  origamiWave: {
+    label: 'Iced ORIGAMI Wave Flash Brew', descr: 'Sweeter and rounder, with calmer wave-filter flow and more body.',
+    baseDose: 15, ratio: 15, hotWater: 180, ice: 45, temp: 93,
+    grind: 'Medium (~750μm)', grindRef: '1Zpresso K-Ultra: start ~700–775', targetTime: '2:35 – 3:10',
+    orientation: 'ORIGAMI wave filter · 45 g ice in server',
+    agitation: 'Use calm centered pulses; avoid forceful spirals that can stall the flatter wave bed.',
+    steps: [{ time: 0, label: 'Bloom', water: 45 }, { time: 40, label: 'Pour 2', water: 45 }, { time: 65, label: 'Pour 3', water: 45 }, { time: 90, label: 'Pour 4', water: 'remainingWater' }],
+    tips: ['Use this path for a more rounded, sweeter flash brew.', 'Keep the water level modest and pour centrally.', 'If it stalls or tastes dry, grind coarser first.', 'Swirl the server after drawdown to melt and integrate the ice.']
+  },
+  aeropress: {
+    label: 'Iced AeroPress Flash Brew', descr: 'Crisp, aromatic, and repeatable — a 2:1 hot-water-to-ice flash brew.',
+    baseDose: 15, ratio: 15, hotWater: 150, ice: 75, temp: 98,
+    grind: 'Medium-fine', grindRef: '1Zpresso K-Ultra: start ~500–550', targetTime: '~3:30 – 3:45',
+    orientation: 'Upright · 2 rinsed paper filters or Flow Control cap · 75 g ice in carafe',
+    agitation: 'Stir firmly 10–15 times after pouring, then press slowly and evenly for 30–45 seconds.',
+    steps: [{ time: 0, label: 'Pour all hot water', water: 'hotWater' }, { time: 0, label: 'Stir 10–15 times', water: 0 }, { time: 180, label: 'Press slowly 30–45s', water: 0 }],
+    tips: ['The 2:1 hot-water-to-ice ratio helps preserve extraction versus equal parts water and ice.', 'Sour or hollow? Grind finer or extend the steep by 15–30 seconds.', 'Bitter or drying? Grind coarser, stir less, or reduce temperature for darker roasts.', 'Stir the carafe after pressing so the remaining ice fully chills the coffee.']
+  }
+};
+
+const ICED_REFERENCES = [
+  { author: 'AeroPress', title: 'Iced AeroPress Flash Brew', where: 'aeropress.com — 2:1 hot water to ice, 3-minute steep, slow press' },
+  { author: 'James Hoffmann', title: 'Better than cold brew: How to make iced filter coffee', where: 'YouTube — flash-brew rationale' },
+  { author: 'ORIGAMI Japan', title: 'ORIGAMI Dripper product and filter guides', where: 'origami-kai.com — cone and wave filter compatibility' },
+  { author: '1Zpresso', title: 'Coffee Grind Size Chart', where: '1zpresso.coffee' }
+];
+
 const PRESETS = [
   { label: 'Washed Default', s: { bean: 'washed', acidity: 'balanced', strength: 'balanced', useDefault: true } },
+
   { label: 'Natural Default', s: { bean: 'natural', acidity: 'balanced', strength: 'balanced', useDefault: true } },
   { label: 'Honey Default', s: { bean: 'honey', acidity: 'balanced', strength: 'balanced', useDefault: true } },
   { label: 'Anaerobic Default', s: { bean: 'anaerobic', acidity: 'balanced', strength: 'balanced', useDefault: true } },
@@ -599,11 +656,16 @@ const PRESETS = [
   { label: 'ORIGAMI Wave', s: { method: 'origami', origamiFilter: 'wave', dose: 15, ratio: 16, temp: 93 } },
   { label: 'AeroPress Quick', s: { method: 'aeropress', aeroStyle: 'quick', dose: 15, temp: 90 } },
   { label: 'AeroPress Standard', s: { method: 'aeropress', aeroStyle: 'standard', dose: 15, temp: 92 } },
-  { label: 'AeroPress Inverted', s: { method: 'aeropress', aeroStyle: 'inverted', dose: 15, temp: 90 } }
+  { label: 'AeroPress Inverted', s: { method: 'aeropress', aeroStyle: 'inverted', brewStyle: 'hot', dose: 15, temp: 90 } },
+  { label: 'Iced V60', s: { method: 'v60', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
+  { label: 'Iced ORIGAMI Cone', s: { method: 'origami', origamiFilter: 'cone', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
+  { label: 'Iced ORIGAMI Wave', s: { method: 'origami', origamiFilter: 'wave', brewStyle: 'iced', dose: 15, ratio: 15, temp: 93 } },
+  { label: 'Iced AeroPress', s: { method: 'aeropress', brewStyle: 'iced', dose: 15, temp: 98 } }
 ];
 
 const state = {
   method: 'v60',
+  brewStyle: 'hot',
   origamiFilter: 'cone',
   aeroStyle: 'quick',
   bean: 'washed',
@@ -652,6 +714,53 @@ function bindPills(id, key) {
 bindPills('acidityPills', 'acidity');
 bindPills('strengthPills', 'strength');
 bindPills('origamiFilterPills', 'origamiFilter');
+document.getElementById('origamiFilterPills').querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    if (state.brewStyle === 'iced') {
+      const iced = icedRecipeForState();
+      state.dose = iced.baseDose;
+      state.ratio = iced.ratio;
+      state.temp = iced.temp;
+      syncControls();
+      updateAll();
+    }
+  });
+});
+
+function icedRecipeForState() {
+  if (state.method === 'aeropress') return ICED_RECIPES.aeropress;
+  if (state.method === 'origami') return state.origamiFilter === 'wave' ? ICED_RECIPES.origamiWave : ICED_RECIPES.origamiCone;
+  return ICED_RECIPES.v60;
+}
+
+const brewStyleGroup = document.getElementById('brewStylePills');
+brewStyleGroup.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    state.brewStyle = p.dataset.val;
+    if (state.brewStyle === 'iced') {
+      const iced = icedRecipeForState();
+      state.dose = iced.baseDose;
+      state.ratio = iced.ratio;
+      state.temp = iced.temp;
+    } else if (state.method === 'aeropress') {
+      const a = AEROPRESS_RECIPES[state.aeroStyle];
+      state.dose = a.baseDose;
+      state.temp = a.temp;
+    } else if (state.method === 'origami') {
+      const o = ORIGAMI_RECIPES[state.origamiFilter];
+      state.dose = o.baseDose;
+      state.ratio = o.ratio;
+      state.temp = o.temp;
+    } else {
+      const b = BEAN_DEFAULTS[state.bean];
+      state.dose = 15;
+      state.ratio = b.ratio;
+      state.temp = b.temp;
+    }
+    syncControls();
+    updateAll();
+  });
+});
 
 const methodGroup = document.getElementById('methodPills');
 methodGroup.querySelectorAll('.pill').forEach(p => {
@@ -659,7 +768,12 @@ methodGroup.querySelectorAll('.pill').forEach(p => {
     methodGroup.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
     state.method = p.dataset.val;
-    if (state.method === 'aeropress') {
+    if (state.brewStyle === 'iced') {
+      const iced = icedRecipeForState();
+      state.dose = iced.baseDose;
+      state.ratio = iced.ratio;
+      state.temp = iced.temp;
+    } else if (state.method === 'aeropress') {
       const a = AEROPRESS_RECIPES[state.aeroStyle];
       state.dose = a.baseDose;
       state.temp = a.temp;
@@ -683,10 +797,17 @@ const aeroStyleGroup = document.getElementById('aeroStylePills');
 aeroStyleGroup.querySelectorAll('.pill').forEach(p => {
   p.addEventListener('click', () => {
     state.aeroStyle = p.dataset.val;
-    const a = AEROPRESS_RECIPES[state.aeroStyle];
     state.method = 'aeropress';
-    state.dose = a.baseDose;
-    state.temp = a.temp;
+    if (state.brewStyle === 'iced') {
+      const iced = ICED_RECIPES.aeropress;
+      state.dose = iced.baseDose;
+      state.ratio = iced.ratio;
+      state.temp = iced.temp;
+    } else {
+      const a = AEROPRESS_RECIPES[state.aeroStyle];
+      state.dose = a.baseDose;
+      state.temp = a.temp;
+    }
     syncControls();
     updateAll();
   });
@@ -696,15 +817,16 @@ aeroStyleGroup.querySelectorAll('.pill').forEach(p => {
 function applyMethod() {
   const aero = state.method === 'aeropress';
   const origami = state.method === 'origami';
-  document.getElementById('grpAeroStyle').style.display = aero ? '' : 'none';
+  const iced = state.brewStyle === 'iced';
+  document.getElementById('grpAeroStyle').style.display = aero && !iced ? '' : 'none';
   document.getElementById('grpOrigamiFilter').style.display = origami ? '' : 'none';
-  document.getElementById('grpBean').style.display = (aero || origami) ? 'none' : '';
+  document.getElementById('grpBean').style.display = (aero || origami || iced) ? 'none' : '';
   document.getElementById('ratioWrap').style.display = aero ? 'none' : '';
-  document.getElementById('grpAcidity').style.display = (aero || origami) ? 'none' : '';
-  document.getElementById('grpStrength').style.display = (aero || origami) ? 'none' : '';
-  // AeroPress runs near-boiling; widen the temp slider range when active.
+  document.getElementById('grpAcidity').style.display = (aero || origami || iced) ? 'none' : '';
+  document.getElementById('grpStrength').style.display = (aero || origami || iced) ? 'none' : '';
+  // AeroPress flash brew runs near boiling; widen the temperature range when active.
   tempSlider.min = aero ? '80' : '85';
-  tempSlider.max = aero ? '96' : '96';
+  tempSlider.max = (aero && iced) ? '99' : '96';
 }
 
 const presetsEl = document.getElementById('presets');
@@ -714,6 +836,7 @@ PRESETS.forEach(p => {
   btn.textContent = p.label;
   btn.addEventListener('click', () => {
     Object.assign(state, p.s);
+    if (!Object.prototype.hasOwnProperty.call(p.s, 'brewStyle')) state.brewStyle = 'hot';
     if (p.s.useDefault) {
       const b = BEAN_DEFAULTS[state.bean];
       state.dose = 15;
@@ -730,6 +853,9 @@ function syncControls() {
   applyMethod();
   document.querySelectorAll('#methodPills .pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.method);
+  });
+  document.querySelectorAll('#brewStylePills .pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === state.brewStyle);
   });
   document.querySelectorAll('#aeroStylePills .pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.aeroStyle);
@@ -785,7 +911,22 @@ function buildOrigamiSchedule() {
   return { pours, total };
 }
 
+function buildIcedSchedule() {
+  const recipe = icedRecipeForState();
+  const scale = state.dose / recipe.baseDose;
+  const hotWater = Math.round(recipe.hotWater * scale);
+  const ice = Math.round(recipe.ice * scale);
+  let cum = 0;
+  const pours = recipe.steps.map(s => {
+    const amount = s.water === 0 ? 0 : s.water === 'remainingWater' ? hotWater - cum : Math.round(recipe[s.water] ? recipe[s.water] * scale : s.water * scale);
+    cum += amount;
+    return { time: s.time, label: s.label, amount, cum };
+  });
+  return { pours, hotWater, ice, total: hotWater + ice };
+}
+
 function buildSchedule() {
+  if (state.brewStyle === 'iced') return buildIcedSchedule();
   if (state.method === 'aeropress') return buildAeroSchedule();
   if (state.method === 'origami') return buildOrigamiSchedule();
   const b = BEAN_DEFAULTS[state.bean];
@@ -838,6 +979,27 @@ function renderRecipe() {
   document.getElementById('doseVal').textContent = `${state.dose} g`;
   document.getElementById('ratioVal').textContent = `1:${state.ratio}`;
   document.getElementById('tempVal').textContent = `${state.temp} °C`;
+
+  if (state.brewStyle === 'iced') {
+    const iced = icedRecipeForState();
+    const sched = buildSchedule();
+    document.getElementById('recipeTitle').textContent = iced.label;
+    document.getElementById('recipeDescr').textContent = iced.descr;
+    document.getElementById('recipeRatio').textContent = `1:${(sched.total / state.dose).toFixed(1)}`;
+    document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
+    document.getElementById('stTotalLbl').textContent = 'Final Water';
+    document.getElementById('stTotal').innerHTML = `${sched.total}<span class="unit"> g</span>`;
+    document.getElementById('stTemp').innerHTML = `${state.temp}<span class="unit"> °C</span>`;
+    document.getElementById('stTime').textContent = iced.targetTime;
+    document.getElementById('stGrind').textContent = iced.grind + ' · ' + iced.orientation;
+    document.getElementById('stGrindRef').textContent = iced.grindRef;
+    document.getElementById('stBloomLbl').textContent = 'Ice:';
+    document.getElementById('stBloom').textContent = `${sched.ice} g in the server/carafe before brewing · ${sched.hotWater} g hot water through coffee`;
+    document.getElementById('stAgitLbl').textContent = 'Technique:';
+    document.getElementById('stAgit').textContent = iced.agitation;
+    return;
+  }
+  document.getElementById('stTotalLbl').textContent = 'Total Water';
 
   if (state.method === 'aeropress') {
     const a = AEROPRESS_RECIPES[state.aeroStyle];
@@ -900,13 +1062,15 @@ function renderRecipe() {
 }
 
 function renderTips() {
-  const b = state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] :
+  const b = state.brewStyle === 'iced' ? icedRecipeForState() :
+            state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] :
             state.method === 'origami' ? ORIGAMI_RECIPES[state.origamiFilter] : BEAN_DEFAULTS[state.bean];
   document.getElementById('tipsList').innerHTML = b.tips.map(t => `<li>${t}</li>`).join('');
 }
 
 function renderRefs() {
-  const refs = state.method === 'aeropress' ? AEROPRESS_REFERENCES :
+  const refs = state.brewStyle === 'iced' ? ICED_REFERENCES :
+               state.method === 'aeropress' ? AEROPRESS_REFERENCES :
                state.method === 'origami' ? ORIGAMI_REFERENCES : BEAN_DEFAULTS[state.bean].references;
   document.getElementById('refsList').innerHTML = refs.map(r => `
     <div class="ref-row">
@@ -916,7 +1080,41 @@ function renderRefs() {
   `).join('');
 }
 
+function updateIcedPrompt() {
+  const iced = icedRecipeForState();
+  const sched = buildSchedule();
+  const lines = sched.pours.map(p => `  ${fmtTime(p.time)}  ${p.label.padEnd(22)}  ${p.amount ? '+' + p.amount + 'g' : ''}  (hot-water total ${p.cum}g)`).join('\n');
+  document.getElementById('promptText').textContent =
+`Brew an iced flash-brew coffee with ${iced.orientation}.
+
+Spec
+- Dose: ${state.dose} g
+- Ice: ${sched.ice} g in the server/carafe before brewing
+- Hot water through coffee: ${sched.hotWater} g
+- Final beverage water: ${sched.total} g (ratio 1:${(sched.total / state.dose).toFixed(1)})
+- Water temperature: ${state.temp} °C
+- Grind: ${iced.grind}
+- K-Ultra reference: ${iced.grindRef}
+- Target brew time: ${iced.targetTime}
+
+Schedule
+${lines}
+
+Technique
+- ${iced.agitation}
+- After drawdown/pressing, swirl or stir the server until the ice fully chills and integrates the coffee.
+
+Dial-in notes
+${iced.tips.map(t => `- ${t}`).join('\n')}
+
+References
+${ICED_REFERENCES.map(r => `- ${r.author} — ${r.title} (${r.where})`).join('\n')}
+
+Walk me through this iced brew step-by-step and recommend one adjustment for sour/thin coffee and one for bitter/dry coffee.`;
+}
+
 function updatePrompt() {
+  if (state.brewStyle === 'iced') { updateIcedPrompt(); return; }
   if (state.method === 'aeropress') { updateAeroPrompt(); return; }
   if (state.method === 'origami') { updateOrigamiPrompt(); return; }
   const b = BEAN_DEFAULTS[state.bean];

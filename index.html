@@ -111,6 +111,14 @@
   .stat .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
   .stat .value { font-size: 16px; font-weight: 600; font-family: "SF Mono", Menlo, monospace; margin-top: 3px; }
   .stat .unit { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .ice-callout {
+    display: none; align-items: center; justify-content: space-between; gap: 16px;
+    margin-top: 14px; padding: 13px 16px; border: 1px solid var(--accent);
+    border-radius: 6px; background: rgba(212, 145, 90, 0.12);
+  }
+  .ice-callout .label { color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .ice-callout .detail { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .ice-callout .amount { color: var(--accent); font-family: "SF Mono", Menlo, monospace; font-size: 28px; font-weight: 700; line-height: 1; white-space: nowrap; }
   .extras { margin-top: 14px; font-size: 12px; color: var(--muted); }
   .extras div { margin-bottom: 4px; }
   .extras strong { color: var(--text); font-weight: 500; }
@@ -365,6 +373,13 @@
         <div class="stat"><div class="label" id="stTotalLbl">Total Water</div><div class="value" id="stTotal">225<span class="unit"> g</span></div></div>
         <div class="stat"><div class="label">Temperature</div><div class="value" id="stTemp">94<span class="unit"> °C</span></div></div>
         <div class="stat"><div class="label">Brew Time</div><div class="value" id="stTime">~3:00</div></div>
+      </div>
+      <div class="ice-callout" id="iceCallout" aria-live="polite">
+        <div>
+          <div class="label">Ice to add before brewing</div>
+          <div class="detail" id="iceDetail">Weigh it in the server/carafe first.</div>
+        </div>
+        <div class="amount" id="iceAmount">45 g</div>
       </div>
       <div class="extras">
         <div><strong>Grind:</strong> <span id="stGrind"></span></div>
@@ -976,6 +991,7 @@ function renderSchedule() {
 }
 
 function renderRecipe() {
+  document.getElementById('iceCallout').style.display = 'none';
   document.getElementById('doseVal').textContent = `${state.dose} g`;
   document.getElementById('ratioVal').textContent = `1:${state.ratio}`;
   document.getElementById('tempVal').textContent = `${state.temp} °C`;
@@ -989,6 +1005,9 @@ function renderRecipe() {
     document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
     document.getElementById('stTotalLbl').textContent = 'Final Water';
     document.getElementById('stTotal').innerHTML = `${sched.total}<span class="unit"> g</span>`;
+    document.getElementById('iceAmount').textContent = `${sched.ice} g`;
+    document.getElementById('iceDetail').textContent = `Weigh in the ${state.method === 'aeropress' ? 'carafe' : 'server'} before brewing · then brew with ${sched.hotWater} g hot water.`;
+    document.getElementById('iceCallout').style.display = 'flex';
     document.getElementById('stTemp').innerHTML = `${state.temp}<span class="unit"> °C</span>`;
     document.getElementById('stTime').textContent = iced.targetTime;
     document.getElementById('stGrind').textContent = iced.grind + ' · ' + iced.orientation;

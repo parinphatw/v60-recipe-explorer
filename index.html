@@ -296,6 +296,14 @@
       </div>
     </div>
 
+    <div class="group" id="grpNeoSetup">
+      <div class="group-title">NEO Setup</div>
+      <div class="pill-group" id="neoSetupPills">
+        <button type="button" class="pill active" data-val="percolation">Regular NEO</button>
+        <button type="button" class="pill" data-val="switch">NEO + SWITCH</button>
+      </div>
+    </div>
+
     <div class="group" id="grpOrigamiFilter">
       <div class="group-title">ORIGAMI Filter</div>
       <div class="pill-group" id="origamiFilterPills">
@@ -373,7 +381,7 @@
         <div class="stat"><div class="label">Dose</div><div class="value" id="stDose">15<span class="unit"> g</span></div></div>
         <div class="stat"><div class="label" id="stTotalLbl">Total Water</div><div class="value" id="stTotal">225<span class="unit"> g</span></div></div>
         <div class="stat"><div class="label">Temperature</div><div class="value" id="stTemp">94<span class="unit"> °C</span></div></div>
-        <div class="stat"><div class="label">Brew Time</div><div class="value" id="stTime">~3:00</div></div>
+        <div class="stat"><div class="label" id="stTimeLbl">Brew Time</div><div class="value" id="stTime">~3:00</div></div>
       </div>
       <div class="ice-callout" id="iceCallout" aria-live="polite">
         <div>
@@ -381,6 +389,13 @@
           <div class="detail" id="iceDetail">Weigh it in the server/carafe first.</div>
         </div>
         <div class="amount" id="iceAmount">45 g</div>
+      </div>
+      <div class="ice-callout" id="valveCallout" aria-live="polite">
+        <div>
+          <div class="label">SWITCH valve</div>
+          <div class="detail" id="valveDetail"></div>
+        </div>
+        <div class="mono" id="valveStatus"></div>
       </div>
       <div class="extras">
         <div><strong>Grind:</strong> <span id="stGrind"></span></div>
@@ -624,10 +639,50 @@ const NEO_RECIPE = {
     'K-Ultra guidance is qualitative, not a calibrated equivalent to Ode 7.2. Sour and thin? Try finer. Bitter and drying? Try coarser.'
   ]
 };
+const NEO_SWITCH_RECIPE = {
+  label: 'V60 NEO + SWITCH — Kurasu',
+  descr: 'Published light-roast hybrid baseline: 16 g / 240 ml / 90.5°C. Closed bloom, then open percolation; source ends with closing at 2:30.',
+  baseDose: 16, ratio: 15, temp: 90.5,
+  grind: 'Coarse · light-roasted single origin',
+  grindRef: 'Source: Fellow Ode Gen 2 — 8.0. K-Ultra: coarse; not a calibrated grinder conversion.',
+  targetTime: '2:30 · close valve',
+  agitation: 'Start CLOSED. Bloom with 50 g and gently swirl 5 times. OPEN at 0:40. Follow the cumulative targets below; center the final pour at 2:00. CLOSE at 2:30, the last source checkpoint.',
+  // Valve events carry no added water. Targets below are cumulative.
+  steps: [
+    { time: 0, label: 'CLOSE SWITCH · start', target: 0, valve: 'closed' },
+    { time: 0, label: 'Bloom · swirl 5 times', target: 50 },
+    { time: 40, label: 'OPEN SWITCH', valve: 'open' },
+    { time: 50, label: 'Pour 2', target: 120 },
+    { time: 90, label: 'Pour 3', target: 200 },
+    { time: 120, label: 'Final pour · center', target: 240 },
+    { time: 150, label: 'CLOSE SWITCH · source ends', valve: 'closed' }
+  ],
+  tips: [
+    'Use the NEO cone on a compatible HARIO SWITCH base with its trigger and steel ball installed. This is not the fixed-base ceramic V60.',
+    'Kurasu specifies a closed start, five gentle bloom swirls, opening at 0:40, and closing at 2:30.',
+    'The source ends with CLOSE at 2:30; later reopening is not specified. Do not add an invented release or extra immersion stage.',
+    'Water targets are input, not beverage yield. Published ml are treated as approximately grams on the scale.',
+    'Other doses scale water only; retained source timings are starting points, not tested at every dose. K-Ultra coarse guidance is not a calibrated Ode 8.0 conversion.'
+  ]
+};
+
+function neoRecipeForState() {
+  return state.neoSetup === 'switch' ? NEO_SWITCH_RECIPE : NEO_RECIPE;
+}
+
 const NEO_REFERENCES = [
   { author: 'Kurasu', title: 'HARIO V60 Dripper NEO — regular NEO recipe', where: '12 g / 200 ml / 91°C; separate from SWITCH recipe', url: 'https://kurasu.live/products/hario-v60-dripper-neo' },
   { author: 'HARIO Europe', title: 'V60 Dripper NEO', where: 'NEO design and matching standard V60 paper', url: 'https://www.hario-europe.com/blogs/hario-community/v60-dripper-neo' }
 ];
+
+const NEO_SWITCH_REFERENCES = [
+  { author: 'Kurasu', title: 'HARIO V60 Dripper NEO — recipe with HARIO Immersion Dripper SWITCH', where: '16 g / 240 ml / 90.5°C; removable-base compatibility and valve schedule', url: 'https://kurasu.live/products/hario-v60-dripper-neo' },
+  NEO_REFERENCES[1]
+];
+
+function neoReferencesForState() {
+  return state.neoSetup === 'switch' ? NEO_SWITCH_REFERENCES : NEO_REFERENCES;
+}
 
 const ORIGAMI_REFERENCES = [
   { author: 'ORIGAMI Japan', title: 'ORIGAMI Dripper product guide', where: 'origami-kai.com — 20 ribs; compatible with cone and wave filters' },
@@ -695,6 +750,15 @@ ICED_RECIPES.neo = {
   ]
 };
 
+ICED_RECIPES.neoSwitch = {
+  ...ICED_RECIPES.neo,
+  label: 'Iced V60 NEO + SWITCH · Open Valve',
+  descr: 'Untested house adaptation on a SWITCH base: valve OPEN throughout. Not Kurasu’s published hybrid recipe.',
+  orientation: 'HARIO V60 NEO + SWITCH · valve OPEN throughout · house adaptation, not Kurasu’s published recipe',
+  agitation: 'Keep the SWITCH valve OPEN throughout; this iced recipe uses percolation, not a closed immersion phase. Gently swirl the bloom and pour steadily.',
+  tips: ['Keep the SWITCH valve OPEN throughout. Do not apply the hot hybrid recipe’s valve timings to this iced house adaptation.', ...ICED_RECIPES.neo.tips]
+};
+
 const ICED_REFERENCES = [
   { author: 'AeroPress', title: 'Iced AeroPress Flash Brew', where: 'aeropress.com — 2:1 hot water to ice, 3-minute steep, slow press' },
   { author: 'James Hoffmann', title: 'Better than cold brew: How to make iced filter coffee', where: 'YouTube — flash-brew rationale' },
@@ -703,7 +767,8 @@ const ICED_REFERENCES = [
 ];
 
 const PRESETS = [
-  { label: 'V60 NEO · Kurasu', s: { method: 'neo', brewStyle: 'hot', dose: 12, ratio: 200 / 12, temp: 91 } },
+  { label: 'V60 NEO · Kurasu', s: { method: 'neo', neoSetup: 'percolation', brewStyle: 'hot', dose: 12, ratio: 200 / 12, temp: 91 } },
+  { label: 'NEO + SWITCH · Kurasu', s: { method: 'neo', neoSetup: 'switch', brewStyle: 'hot', dose: 16, ratio: 15, temp: 90.5 } },
   { label: 'Washed Default', s: { bean: 'washed', acidity: 'balanced', strength: 'balanced', useDefault: true } },
 
   { label: 'Natural Default', s: { bean: 'natural', acidity: 'balanced', strength: 'balanced', useDefault: true } },
@@ -717,7 +782,7 @@ const PRESETS = [
   { label: 'AeroPress Standard', s: { method: 'aeropress', aeroStyle: 'standard', dose: 15, temp: 92 } },
   { label: 'AeroPress Inverted', s: { method: 'aeropress', aeroStyle: 'inverted', brewStyle: 'hot', dose: 15, temp: 90 } },
   { label: 'Iced V60', s: { method: 'v60', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
-  { label: 'Iced V60 NEO · House', s: { method: 'neo', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
+  { label: 'Iced V60 NEO · House', s: { method: 'neo', neoSetup: 'percolation', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
   { label: 'Iced ORIGAMI Cone', s: { method: 'origami', origamiFilter: 'cone', brewStyle: 'iced', dose: 15, ratio: 15, temp: 94 } },
   { label: 'Iced ORIGAMI Wave', s: { method: 'origami', origamiFilter: 'wave', brewStyle: 'iced', dose: 15, ratio: 15, temp: 93 } },
   { label: 'Iced AeroPress', s: { method: 'aeropress', brewStyle: 'iced', dose: 15, temp: 98 } }
@@ -725,6 +790,7 @@ const PRESETS = [
 
 const state = {
   method: 'v60',
+  neoSetup: 'percolation',
   brewStyle: 'hot',
   origamiFilter: 'cone',
   aeroStyle: 'quick',
@@ -787,8 +853,20 @@ document.getElementById('origamiFilterPills').querySelectorAll('.pill').forEach(
   });
 });
 
+document.getElementById('neoSetupPills').querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => {
+    state.neoSetup = p.dataset.val;
+    const recipe = state.brewStyle === 'iced' ? icedRecipeForState() : neoRecipeForState();
+    state.dose = recipe.baseDose;
+    state.ratio = recipe.ratio;
+    state.temp = recipe.temp;
+    syncControls();
+    updateAll();
+  });
+});
+
 function icedRecipeForState() {
-  if (state.method === 'neo') return ICED_RECIPES.neo;
+  if (state.method === 'neo') return state.neoSetup === 'switch' ? ICED_RECIPES.neoSwitch : ICED_RECIPES.neo;
   if (state.method === 'aeropress') return ICED_RECIPES.aeropress;
   if (state.method === 'origami') return state.origamiFilter === 'wave' ? ICED_RECIPES.origamiWave : ICED_RECIPES.origamiCone;
   return ICED_RECIPES.v60;
@@ -808,7 +886,7 @@ brewStyleGroup.querySelectorAll('.pill').forEach(p => {
       state.dose = a.baseDose;
       state.temp = a.temp;
     } else if (state.method === 'origami' || state.method === 'neo') {
-      const o = state.method === 'neo' ? NEO_RECIPE : ORIGAMI_RECIPES[state.origamiFilter];
+      const o = state.method === 'neo' ? neoRecipeForState() : ORIGAMI_RECIPES[state.origamiFilter];
       state.dose = o.baseDose;
       state.ratio = o.ratio;
       state.temp = o.temp;
@@ -839,7 +917,7 @@ methodGroup.querySelectorAll('.pill').forEach(p => {
       state.dose = a.baseDose;
       state.temp = a.temp;
     } else if (state.method === 'origami' || state.method === 'neo') {
-      const o = state.method === 'neo' ? NEO_RECIPE : ORIGAMI_RECIPES[state.origamiFilter];
+      const o = state.method === 'neo' ? neoRecipeForState() : ORIGAMI_RECIPES[state.origamiFilter];
       state.dose = o.baseDose;
       state.ratio = o.ratio;
       state.temp = o.temp;
@@ -882,6 +960,7 @@ function applyMethod() {
   const iced = state.brewStyle === 'iced';
   document.getElementById('grpAeroStyle').style.display = aero && !iced ? '' : 'none';
   document.getElementById('grpOrigamiFilter').style.display = origami ? '' : 'none';
+  document.getElementById('grpNeoSetup').style.display = neo ? '' : 'none';
   document.getElementById('grpBean').style.display = (aero || origami || neo || iced) ? 'none' : '';
   document.getElementById('ratioWrap').style.display = (aero || neo) ? 'none' : '';
   document.getElementById('grpAcidity').style.display = (aero || origami || neo || iced) ? 'none' : '';
@@ -889,6 +968,7 @@ function applyMethod() {
   // AeroPress flash brew runs near boiling; widen the temperature range when active.
   tempSlider.min = aero ? '80' : '85';
   tempSlider.max = (aero && iced) ? '99' : '96';
+  tempSlider.step = neo && state.neoSetup === 'switch' && !iced ? '0.5' : '1';
 }
 
 const presetsEl = document.getElementById('presets');
@@ -926,6 +1006,9 @@ function syncControls() {
   document.querySelectorAll('#origamiFilterPills .pill').forEach(p => {
     p.classList.toggle('active', p.dataset.val === state.origamiFilter);
   });
+  document.querySelectorAll('#neoSetupPills .pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === state.neoSetup);
+  });
   doseSlider.value = state.dose;
   ratioSlider.value = state.ratio;
   tempSlider.value = state.temp;
@@ -962,7 +1045,7 @@ function buildAeroSchedule() {
 }
 
 function buildOrigamiSchedule() {
-  const o = state.method === 'neo' ? NEO_RECIPE : ORIGAMI_RECIPES[state.origamiFilter];
+  const o = state.method === 'neo' ? neoRecipeForState() : ORIGAMI_RECIPES[state.origamiFilter];
   const scale = state.dose / o.baseDose;
   const total = Math.round(state.dose * state.ratio);
   let cum = 0;
@@ -970,6 +1053,19 @@ function buildOrigamiSchedule() {
     const amount = s.water === 'remainingWater' ? total - cum : Math.round(s.water * scale);
     cum += amount;
     return { time: s.time, label: s.label, amount, cum };
+  });
+  return { pours, total };
+}
+
+function buildNeoSwitchSchedule() {
+  const scale = state.dose / NEO_SWITCH_RECIPE.baseDose;
+  const total = Math.round(state.dose * NEO_SWITCH_RECIPE.ratio);
+  let cum = 0;
+  const pours = NEO_SWITCH_RECIPE.steps.map(s => {
+    const next = s.target === undefined ? cum : Math.round(s.target * scale);
+    const amount = next - cum;
+    cum = next;
+    return { time: s.time, label: s.label, amount, cum, valve: s.valve };
   });
   return { pours, total };
 }
@@ -990,6 +1086,7 @@ function buildIcedSchedule() {
 
 function buildSchedule() {
   if (state.brewStyle === 'iced') return buildIcedSchedule();
+  if (state.method === 'neo' && state.neoSetup === 'switch') return buildNeoSwitchSchedule();
   if (state.method === 'aeropress') return buildAeroSchedule();
   if (state.method === 'origami' || state.method === 'neo') return buildOrigamiSchedule();
   const b = BEAN_DEFAULTS[state.bean];
@@ -1040,6 +1137,12 @@ function renderSchedule() {
 
 function renderRecipe() {
   document.getElementById('iceCallout').style.display = 'none';
+  const neoSwitch = state.method === 'neo' && state.neoSetup === 'switch';
+  const icedStyle = state.brewStyle === 'iced';
+  document.getElementById('stTimeLbl').textContent = neoSwitch && !icedStyle ? 'Last Checkpoint' : 'Brew Time';
+  document.getElementById('valveCallout').style.display = neoSwitch ? 'flex' : 'none';
+  document.getElementById('valveStatus').textContent = icedStyle ? 'OPEN throughout' : 'Start CLOSED';
+  document.getElementById('valveDetail').textContent = icedStyle ? 'Percolation on a SWITCH base; not a published hybrid iced recipe.' : 'OPEN at 0:40 · CLOSE at 2:30. Later reopening is not specified by the source.';
   document.getElementById('doseVal').textContent = `${state.dose} g`;
   document.getElementById('ratioVal').textContent = `1:${state.ratio}`;
   document.getElementById('tempVal').textContent = `${state.temp} °C`;
@@ -1088,10 +1191,10 @@ function renderRecipe() {
   }
 
   if (state.method === 'origami' || state.method === 'neo') {
-    const o = state.method === 'neo' ? NEO_RECIPE : ORIGAMI_RECIPES[state.origamiFilter];
+    const o = state.method === 'neo' ? neoRecipeForState() : ORIGAMI_RECIPES[state.origamiFilter];
     const sched = buildSchedule();
     document.getElementById('recipeTitle').textContent = o.label;
-    document.getElementById('recipeDescr').textContent = o.descr + (state.method === 'neo' && state.dose !== 12 ? ' Water targets are app-scaled; timing is a starting point.' : '');
+    document.getElementById('recipeDescr').textContent = o.descr + (state.method === 'neo' && state.dose !== o.baseDose ? ' Water targets are app-scaled; timing is a starting point.' : '') + (state.method === 'neo' && state.temp !== o.temp ? ' Temperature customized from source.' : '');
     document.getElementById('recipeRatio').textContent = `1:${Number(state.ratio.toFixed(2))}`;
     document.getElementById('stDose').innerHTML = `${state.dose}<span class="unit"> g</span>`;
     document.getElementById('stTotal').innerHTML = `${sched.total}<span class="unit"> g</span>`;
@@ -1102,7 +1205,7 @@ function renderRecipe() {
     document.getElementById('stBloomLbl').textContent = 'Filter:';
     document.getElementById('stBloom').textContent = state.method === 'neo' ? 'Matching V60 cone paper · rinse thoroughly · ml ≈ g for scale brewing' : `${state.origamiFilter === 'cone' ? 'Cone paper — precise, fast-flowing' : 'Wave paper — steadier, more resistant'} · rinse thoroughly`;
     document.getElementById('stAgitLbl').textContent = 'Agitation:';
-    document.getElementById('stAgit').textContent = state.method === 'neo' && state.dose !== 12 ? 'Use the app-scaled targets below. Source timings are only a starting point. Let the final pour drain.' : o.agitation;
+    document.getElementById('stAgit').textContent = state.method === 'neo' && state.dose !== o.baseDose ? 'Use the app-scaled targets below. Source timings are only a starting point.' + (neoSwitch ? ' Start CLOSED, gently swirl 5 times, OPEN at 0:40 and CLOSE at 2:30.' : ' Let the final pour drain.') : o.agitation;
     return;
   }
 
@@ -1131,18 +1234,18 @@ function renderRecipe() {
 function renderTips() {
   const b = state.brewStyle === 'iced' ? icedRecipeForState() :
             state.method === 'aeropress' ? AEROPRESS_RECIPES[state.aeroStyle] :
-            state.method === 'neo' ? NEO_RECIPE : state.method === 'origami' ? ORIGAMI_RECIPES[state.origamiFilter] : BEAN_DEFAULTS[state.bean];
+            state.method === 'neo' ? neoRecipeForState() : state.method === 'origami' ? ORIGAMI_RECIPES[state.origamiFilter] : BEAN_DEFAULTS[state.bean];
   document.getElementById('tipsList').innerHTML = b.tips.map(t => `<li>${t}</li>`).join('');
 }
 
 function activeIcedReferences() {
-  return state.method === 'neo' ? [...NEO_REFERENCES, ...ICED_REFERENCES] : ICED_REFERENCES;
+  return state.method === 'neo' ? [...neoReferencesForState(), ...ICED_REFERENCES] : ICED_REFERENCES;
 }
 
 function renderRefs() {
   const refs = state.brewStyle === 'iced' ? activeIcedReferences() :
                state.method === 'aeropress' ? AEROPRESS_REFERENCES :
-               state.method === 'neo' ? NEO_REFERENCES : state.method === 'origami' ? ORIGAMI_REFERENCES : BEAN_DEFAULTS[state.bean].references;
+               state.method === 'neo' ? neoReferencesForState() : state.method === 'origami' ? ORIGAMI_REFERENCES : BEAN_DEFAULTS[state.bean].references;
   document.getElementById('refsList').innerHTML = refs.map(r => `
     <div class="ref-row">
       <span class="ref-author">${r.author}</span> — <span class="ref-title">${r.url ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer" style="color:inherit">${r.title}</a>` : r.title}</span>
@@ -1239,30 +1342,32 @@ Walk me through this brew step-by-step, call out timing checkpoints, and tell me
 
 function updateNeoPrompt() {
   const s = buildSchedule();
+  const recipe = neoRecipeForState();
+  const hybrid = state.neoSetup === 'switch';
   document.getElementById('promptText').textContent =
-`Brew a regular HARIO V60 NEO percolation recipe based on Kurasu. Not a SWITCH immersion recipe.
+`${hybrid ? 'Brew the HARIO V60 NEO + SWITCH hybrid recipe based on Kurasu. Start with the valve CLOSED.' : 'Brew a regular HARIO V60 NEO percolation recipe based on Kurasu. Not a SWITCH immersion recipe.'}
 
-Published baseline: 12 g light-roasted coffee / 200 ml water / 91°C.
+Published baseline: ${recipe.baseDose} g light-roasted coffee / ${Math.round(recipe.baseDose * recipe.ratio)} ml water / ${recipe.temp}°C.
 Current dose: ${state.dose} g; total water: ${s.total} g; temperature: ${state.temp} °C.
-${state.dose !== 12 || state.temp !== 91 ? 'App-scaled/customized setting, not the unchanged published recipe.' : 'Published baseline, using the practical approximation 1 ml ≈ 1 g.'}
-Grind: ${NEO_RECIPE.grind}.
-${NEO_RECIPE.grindRef}
+${state.dose !== recipe.baseDose || state.temp !== recipe.temp ? 'App-scaled/customized setting, not the unchanged published recipe.' : 'Published baseline, using the practical approximation 1 ml ≈ 1 g.'}
+Grind: ${recipe.grind}.
+${recipe.grindRef}
 Use matching V60 cone paper and rinse it first.
 
 Schedule (incremental amounts followed by cumulative scale targets)
-${s.pours.map(p => `${fmtTime(p.time)} — ${p.label}: +${p.amount} g → ${p.cum} g`).join('\n')}
-The final pour STARTS at 1:40; finish time is not published. Allow drawdown.
+${s.pours.map(p => `${fmtTime(p.time)} — ${p.label}: ${p.amount ? '+' + p.amount + ' g → ' : ''}${p.cum} g${p.valve ? ' · valve ' + p.valve.toUpperCase() : ''}`).join('\n')}
+${hybrid ? 'CLOSE at 2:30 is the last source checkpoint; later reopening is not specified. Do not invent another release, steep, or guaranteed drawdown endpoint.' : 'The final pour STARTS at 1:40; finish time is not published. Allow drawdown.'}
 Other doses scale water only. Timing remains a starting point, not a validated scaled recipe.
 
-${NEO_RECIPE.tips.map(t => '- ' + t).join('\n')}
+${recipe.tips.map(t => '- ' + t).join('\n')}
 
 Sources
-${NEO_REFERENCES.map(r => `${r.author} — ${r.title}: ${r.url}`).join('\n')}
+${neoReferencesForState().map(r => `${r.author} — ${r.title}: ${r.url}`).join('\n')}
 Walk me through this brew and suggest a taste-based adjustment. Do not invent an official finish time or calibrated K-Ultra setting.`;
 }
 
 function updateOrigamiPrompt() {
-  const o = state.method === 'neo' ? NEO_RECIPE : ORIGAMI_RECIPES[state.origamiFilter];
+  const o = state.method === 'neo' ? neoRecipeForState() : ORIGAMI_RECIPES[state.origamiFilter];
   const sched = buildSchedule();
   const pourLines = sched.pours.map(p =>
     `  ${fmtTime(p.time)}  ${p.label.padEnd(14)}  +${p.amount}g  (cumulative ${p.cum}g)`
@@ -1331,7 +1436,7 @@ Walk me through this brew step-by-step, call out the timing checkpoints, and tel
 }
 
 function updateAll() {
-  document.getElementById('scheduleTitle').textContent = state.method === 'aeropress' ? 'Brew Schedule' : 'Pour Schedule';
+  document.getElementById('scheduleTitle').textContent = state.method === 'aeropress' || (state.method === 'neo' && state.neoSetup === 'switch' && state.brewStyle === 'hot') ? 'Brew Schedule' : 'Pour Schedule';
   renderRecipe();
   renderSchedule();
   renderTips();

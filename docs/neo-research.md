@@ -20,6 +20,23 @@ Source: [HARIO Europe — V60 Dripper NEO](https://www.hario-europe.com/blogs/ha
 
 HARIO describes NEO's distinct ribbed Tritan design and compatibility with matching V60 filter paper. This is product guidance, not attribution for Kurasu's numeric recipe.
 
+## NEO + SWITCH combination
+
+After the user clarified the hardware combination, the same Kurasu product page was inspected again in a live browser. Its product details describe a removable NEO body/base and use with the HARIO Immersion Dripper SWITCH. Its separate **Kurasu Recipe with HARIO Immersion Dripper SWITCH** section specifies:
+
+- Light-roasted single origin: 16 g coffee, 240 ml water, 90.5°C.
+- Coarse grind: Fellow Ode Gen 2 setting 8.0; HARIO paper filter.
+- Begin with the valve closed. At 0:00, pour to 50 ml and gently swirl five times.
+- At 0:40, open the valve.
+- At 0:50, pour to 120 ml cumulative; at 1:30, to 200 ml; at 2:00, pour centrally to 240 ml.
+- At 2:30, close the valve. This is the last published checkpoint. A later reopening or extra immersion/release stage is not specified and must not be invented.
+
+The verified evidence and implementation guardrails were passed through another actual MoA synthesis (default preset, two advisor slots plus aggregator). This does not constitute brew-testing.
+
+The app exposes **Regular NEO / NEO + SWITCH** under NEO Setup, keeps each hot baseline distinct, and represents valve events separately from water additions. SWITCH water scaling rounds cumulative targets before deriving incremental pours. Half-degree controls preserve 90.5°C. Other doses keep source timestamps as unvalidated starting points.
+
+For the iced house adaptation on a SWITCH base, the valve stays **OPEN throughout**. This is percolation over ice, not a sourced hybrid immersion recipe. Hot valve events must not leak into iced mode, and switching back restores the selected hot setup's baseline.
+
 ## App choices, not published claims
 
 - Treat ml as approximately grams for practical scale brewing.
